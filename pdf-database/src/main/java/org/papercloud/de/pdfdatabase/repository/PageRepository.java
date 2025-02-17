@@ -1,0 +1,10 @@
+package org.papercloud.de.pdfdatabase.repository;
+
+import java.util.List;
+import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface PageRepository extends JpaRepository<PagesPdfEntity, Long> {
+
+  List<PagesPdfEntity> findByDocumentId(Long documentId);
+}
