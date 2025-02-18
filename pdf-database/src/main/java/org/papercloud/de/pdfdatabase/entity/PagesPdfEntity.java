@@ -19,9 +19,6 @@ public class PagesPdfEntity {
   private int pageNumber;
 
   @Lob
-  private byte[] pageData; // PDF page as image or PDF blob
-
-  @Lob
   private String pageText; // Extracted text for searching
 
   @ManyToOne

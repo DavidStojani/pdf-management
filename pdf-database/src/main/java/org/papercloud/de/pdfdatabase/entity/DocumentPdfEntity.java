@@ -27,6 +27,10 @@ public class DocumentPdfEntity {
 
   private Long size;
 
+  @Lob
+  @Column(name = "pdf_content")
+  private byte[] pdfContent;
+
   private LocalDateTime uploadedAt;
 
   @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
