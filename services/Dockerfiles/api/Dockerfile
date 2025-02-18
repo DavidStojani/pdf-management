@@ -1,5 +1,5 @@
 # Use the official OpenJDK image
-FROM openjdk:17-jdk-slim
+FROM openjdk:21-ea-1-jdk-slim
 
 # Set the working directory
 WORKDIR /app
@@ -8,8 +8,8 @@ WORKDIR /app
 ARG JAR_FILE=pdf-api/target/pdf-api-1.0-SNAPSHOT.jar
 COPY ${JAR_FILE} app.jar
 
-# Expose port 8080
-EXPOSE 8080
+# Expose ports for the application and debugger
+EXPOSE 8080 5005
 
-# Run the app
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Enable debugging
+ENTRYPOINT ["java", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005", "-jar", "app.jar"]

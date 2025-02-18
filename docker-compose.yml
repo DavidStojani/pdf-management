@@ -25,6 +25,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: admin
     ports:
       - "8080:8080"
+      - "5005:5005"  # Expose debug port
+    restart: unless-stopped
 
 volumes:
   postgres-data:
