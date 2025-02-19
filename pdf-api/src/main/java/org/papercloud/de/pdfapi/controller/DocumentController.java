@@ -30,8 +30,10 @@ public class DocumentController {
   @Operation(summary = "Upload a PDF document")
   @PostMapping("/upload")
   public ResponseEntity<String> uploadPdf(@RequestParam("file") MultipartFile file) {
+    if (!isValidPdfFile(file)) {
+      return ResponseEntity.status(400).body("Invalid file format. Only PDF files are allowed.");
+    }
     try {
-      logger.info("File name: {}", file.getOriginalFilename());
       DocumentUploadDTO documentUploadDTO = DocumentUploadDTO.builder()
           .fileName(file.getOriginalFilename())
           .contentType(file.getContentType())
@@ -39,9 +41,8 @@ public class DocumentController {
           .inputStream(file.getInputStream())
           .build();
 
-      logger.info("DOCUMENT UPLOAD DTO: {}", documentUploadDTO);
       DocumentDTO documentDTO = documentService.processDocument(documentUploadDTO);
-      return ResponseEntity.ok("File uploaded successfully: " + file.getOriginalFilename());
+      return ResponseEntity.ok("Document uploaded successfully mit ID: " + documentDTO.getId());
 
     } catch (IOException e) {
       return ResponseEntity.status(500).body("Error uploading file: " + e.getMessage());

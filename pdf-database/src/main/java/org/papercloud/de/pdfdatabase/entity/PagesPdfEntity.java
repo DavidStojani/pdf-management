@@ -18,7 +18,7 @@ public class PagesPdfEntity {
 
   private int pageNumber;
 
-  @Lob
+  @Column(columnDefinition = "TEXT")
   private String pageText; // Extracted text for searching
 
   @ManyToOne

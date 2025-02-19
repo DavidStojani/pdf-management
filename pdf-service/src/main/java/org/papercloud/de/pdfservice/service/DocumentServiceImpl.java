@@ -1,13 +1,12 @@
 package org.papercloud.de.pdfservice.service;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.common.dto.DocumentDTO;
 import org.papercloud.de.common.dto.DocumentUploadDTO;
@@ -18,6 +17,8 @@ import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfdatabase.repository.PageRepository;
 import org.papercloud.de.pdfservice.utils.PdfTextExtractorService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StreamUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -28,55 +29,64 @@ public class DocumentServiceImpl implements DocumentService {
   private final PdfTextExtractorService pdfTextExtractorService;
 
   @Override
+  @Transactional
   public DocumentDTO processDocument(DocumentUploadDTO file) throws IOException {
-    //work with the inputstream from dto
-    try (InputStream pdfInputStream = file.getInputStream()) {
-      ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-      pdfInputStream.transferTo(outputStream);
-      byte[] pdfBytes = outputStream.toByteArray();
+    byte[] pdfBytes = extractBytesFromInputStream(file.getInputStream());
 
-      //extract text
-      List<String> textByPage = pdfTextExtractorService.extractTextFromPdf(new ByteArrayInputStream(pdfBytes));
+    DocumentPdfEntity documentEntity = saveDocument(file, pdfBytes);
 
-      //fill the document with info from dto
-      DocumentPdfEntity documentPdfEntity = DocumentPdfEntity.builder()
-          .title(file.getFileName()) // ToDo: Get title from metadata(AI)
-          .filename(file.getFileName())
-          .contentType(file.getContentType())
-          .pdfContent(pdfBytes)
-          .size(file.getSize())
-          .uploadedAt(LocalDateTime.now())
-          .build();
+    List<PagesPdfEntity> pagesEntities = extractAndSavePages(documentEntity, pdfBytes);
 
-      DocumentPdfEntity savedDocumentPdfEntity = documentRepository.save(documentPdfEntity);
-
-      List<PagesPdfEntity> pagesPdfEntityList = new ArrayList<>();
-
-      for (int i = 0; i < textByPage.size(); i++) {
-        PagesPdfEntity pagesPdfEntity = PagesPdfEntity.builder()
-            .document(savedDocumentPdfEntity)
-            .pageNumber(i + 1)
-            .pageText(textByPage.get(i)).build();
-
-        pagesPdfEntityList.add(pagesPdfEntity);
-      }
-      pageRepository.saveAll(pagesPdfEntityList);
-
-      //save the document
-      return null;
-    }
+    return mapDocumentToDTO(documentEntity, pagesEntities);
   }
-    @Override
-    public DocumentDTO getDocument (Long id){
-      return documentRepository.findById(id)
-          .map(document -> mapDocumentToDTO(document, document.getPages()))
-          .orElse(null);
-    }
 
-    @Override
-    public byte[] getDocumentContent (Long id){
-      return new byte[0];
-    }
+  @Override
+  public DocumentDTO getDocument(Long id) {
+    return null;
+  }
+
+  @Override
+  public byte[] getDocumentContent(Long id) {
+    return new byte[0];
+  }
+
+  private byte[] extractBytesFromInputStream(InputStream inputStream) throws IOException {
+    return StreamUtils.copyToByteArray(inputStream);
+  }
+
+  private DocumentPdfEntity saveDocument(DocumentUploadDTO file, byte[] pdfBytes) {
+    DocumentPdfEntity documentEntity = DocumentPdfEntity.builder()
+        .title(extractTitle(file))
+        .filename(file.getFileName())
+        .contentType(file.getContentType())
+        .pdfContent(pdfBytes)
+        .size(file.getSize())
+        .uploadedAt(LocalDateTime.now())
+        .build();
+
+    return documentRepository.save(documentEntity);
+  }
+
+  private List<PagesPdfEntity> extractAndSavePages(DocumentPdfEntity document, byte[] pdfBytes)
+      throws IOException {
+    List<String> textByPage = pdfTextExtractorService.extractTextFromPdf(
+        new ByteArrayInputStream(pdfBytes));
+
+    List<PagesPdfEntity> pagesPdfEntityList = IntStream.rangeClosed(1, textByPage.size())
+        .mapToObj(p -> PagesPdfEntity.builder()
+            .document(document)
+            .pageText(textByPage.get(p))
+            .pageNumber(p + 1)
+            .build())
+        .collect(Collectors.toList());
+
+    return pageRepository.saveAll(pagesPdfEntityList);
+  }
+
+  private String extractTitle(DocumentUploadDTO file) {
+    // TODO: Extract metadata title if available
+    return file.getFileName();
+  }
 
   private DocumentDTO mapDocumentToDTO(DocumentPdfEntity document, List<PagesPdfEntity> pages) {
     DocumentDTO dto = new DocumentDTO();
@@ -97,5 +107,5 @@ public class DocumentServiceImpl implements DocumentService {
     dto.setPages(pageDTOs);
     return dto;
   }
-  }
+}
 
