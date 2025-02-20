@@ -5,12 +5,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.common.dto.DocumentDTO;
+import org.papercloud.de.common.dto.DocumentDownloadDTO;
 import org.papercloud.de.common.dto.DocumentUploadDTO;
 import org.papercloud.de.pdfservice.service.DocumentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -47,6 +51,22 @@ public class DocumentController {
     } catch (IOException e) {
       return ResponseEntity.status(500).body("Error uploading file: " + e.getMessage());
     }
+  }
+
+  @GetMapping("/{id}/download")
+  public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id) {
+    DocumentDownloadDTO document = documentService.downloadDocument(id);
+
+    if (document == null) {
+      return ResponseEntity.notFound().build();
+    }
+
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION,
+            "attachment; filename=\"" + document.getFileName() + "\"")
+        .contentType(MediaType.parseMediaType(document.getContentType()))
+        .contentLength(document.getSize())
+        .body(document.getContent());
   }
 
 

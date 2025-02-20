@@ -3,6 +3,7 @@ package org.papercloud.de.pdfservice.service;
 
 import java.io.IOException;
 import org.papercloud.de.common.dto.DocumentDTO;
+import org.papercloud.de.common.dto.DocumentDownloadDTO;
 import org.papercloud.de.common.dto.DocumentUploadDTO;
 
 public interface DocumentService {
@@ -12,4 +13,6 @@ public interface DocumentService {
   DocumentDTO getDocument(Long id);
 
   byte[] getDocumentContent(Long id);
+
+  DocumentDownloadDTO downloadDocument(Long id);
 }

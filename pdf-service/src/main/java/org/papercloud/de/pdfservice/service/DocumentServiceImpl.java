@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.common.dto.DocumentDTO;
+import org.papercloud.de.common.dto.DocumentDownloadDTO;
 import org.papercloud.de.common.dto.DocumentMapper;
 import org.papercloud.de.common.dto.DocumentUploadDTO;
 import org.papercloud.de.common.dto.PageDTO;
@@ -50,6 +51,13 @@ public class DocumentServiceImpl implements DocumentService {
   @Override
   public byte[] getDocumentContent(Long id) {
     return new byte[0];
+  }
+
+  @Override
+  public DocumentDownloadDTO downloadDocument(Long id) {
+    DocumentPdfEntity documentPdfEntity = documentRepository.findById(id).orElseThrow(() ->  new RuntimeException("Document not found!!!"));
+
+    return documentMapper.toDownloadDTO(documentPdfEntity);
   }
 
   private byte[] extractBytesFromInputStream(InputStream inputStream) throws IOException {
