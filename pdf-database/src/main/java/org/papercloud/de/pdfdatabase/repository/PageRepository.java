@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface PageRepository extends JpaRepository<PagesPdfEntity, Long> {
 
   List<PagesPdfEntity> findByDocumentId(Long documentId);
+
+  List<PagesPdfEntity> findByDocumentIdOrderByPageNumber(Long id);
 }

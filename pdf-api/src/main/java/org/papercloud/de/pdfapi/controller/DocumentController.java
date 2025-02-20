@@ -49,6 +49,7 @@ public class DocumentController {
     }
   }
 
+
   // Simple endpoint to test basic connectivity
   @GetMapping("/ping")
   public ResponseEntity<String> ping() {

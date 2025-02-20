@@ -4,11 +4,12 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.common.dto.DocumentDTO;
+import org.papercloud.de.common.dto.DocumentMapper;
 import org.papercloud.de.common.dto.DocumentUploadDTO;
 import org.papercloud.de.common.dto.PageDTO;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
@@ -27,6 +28,7 @@ public class DocumentServiceImpl implements DocumentService {
   private final DocumentRepository documentRepository;
   private final PageRepository pageRepository;
   private final PdfTextExtractorService pdfTextExtractorService;
+  private final DocumentMapper documentMapper;
 
   @Override
   @Transactional
@@ -35,9 +37,9 @@ public class DocumentServiceImpl implements DocumentService {
 
     DocumentPdfEntity documentEntity = saveDocument(file, pdfBytes);
 
-    List<PagesPdfEntity> pagesEntities = extractAndSavePages(documentEntity, pdfBytes);
+    extractAndSavePages(documentEntity, pdfBytes);
 
-    return mapDocumentToDTO(documentEntity, pagesEntities);
+    return documentMapper.toDocumentDTO(documentEntity);
   }
 
   @Override
@@ -71,41 +73,22 @@ public class DocumentServiceImpl implements DocumentService {
       throws IOException {
     List<String> textByPage = pdfTextExtractorService.extractTextFromPdf(
         new ByteArrayInputStream(pdfBytes));
+    List<PagesPdfEntity> pagesPdfEntityList = new ArrayList<>();
 
-    List<PagesPdfEntity> pagesPdfEntityList = IntStream.rangeClosed(1, textByPage.size())
-        .mapToObj(p -> PagesPdfEntity.builder()
-            .document(document)
-            .pageText(textByPage.get(p))
-            .pageNumber(p + 1)
-            .build())
-        .collect(Collectors.toList());
+    for (int i = 0; i < textByPage.size(); i++) {
+      PagesPdfEntity pagesPdfEntity = PagesPdfEntity.builder()
+          .document(document)
+          .pageNumber(i + 1)
+          .pageText(textByPage.get(i)).build();
 
+      pagesPdfEntityList.add(pagesPdfEntity);
+    }
     return pageRepository.saveAll(pagesPdfEntityList);
   }
 
   private String extractTitle(DocumentUploadDTO file) {
     // TODO: Extract metadata title if available
     return file.getFileName();
-  }
-
-  private DocumentDTO mapDocumentToDTO(DocumentPdfEntity document, List<PagesPdfEntity> pages) {
-    DocumentDTO dto = new DocumentDTO();
-    dto.setId(document.getId());
-    dto.setFileName(document.getFilename());
-    dto.setSize(document.getSize());
-    dto.setUploadedAt(document.getUploadedAt());
-
-    List<PageDTO> pageDTOs = pages.stream()
-        .map(p -> {
-          PageDTO pageDTO = new PageDTO();
-          pageDTO.setPageNumber(p.getPageNumber());
-          pageDTO.setExtractedText(p.getPageText());
-          return pageDTO;
-        })
-        .collect(Collectors.toList());
-
-    dto.setPages(pageDTOs);
-    return dto;
   }
 }
 
