@@ -53,6 +53,7 @@ public class DocumentController {
     }
   }
 
+  @Operation(summary = "Download a PDF document")
   @GetMapping("/{id}/download")
   public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id) {
     DocumentDownloadDTO document = documentService.downloadDocument(id);

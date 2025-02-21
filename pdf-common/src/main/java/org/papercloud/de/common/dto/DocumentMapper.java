@@ -34,6 +34,8 @@ public interface DocumentMapper {
   DocumentPdfEntity toEntity(DocumentUploadDTO dto);
 
   // Map from PagesPdfEntity to PageDTO
+  @Mapping(source = "pageNumber", target = "pageNumber")
+  @Mapping(source = "pageText", target = "extractedText")
   PageDTO toPageDTO(PagesPdfEntity entity);
 
   // Map list of PagesPdfEntity to list of PageDTO
