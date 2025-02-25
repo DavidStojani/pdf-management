@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -15,7 +16,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "document_pages")
+@Table(name = "document_pages", indexes = {
+  @Index(name = "idx_document_id", columnList = "document_id"),
+  @Index(name = "idx_extracted_text", columnList = "page_text")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -29,7 +33,7 @@ public class PagesPdfEntity {
 
   private int pageNumber;
 
-  @Column(columnDefinition = "TEXT")
+  @Column(name = "page_text", columnDefinition = "TEXT")
   private String pageText; // Extracted text for searching
 
   @ManyToOne
