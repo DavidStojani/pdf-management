@@ -3,7 +3,6 @@ package org.papercloud.de.pdfapi.controller;
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.common.dto.SearchResultDTO;
 import org.papercloud.de.pdfservice.service.DocumentSearchSimpleImpl;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

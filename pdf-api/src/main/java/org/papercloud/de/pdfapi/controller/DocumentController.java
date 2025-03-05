@@ -79,6 +79,6 @@ public class DocumentController {
   }
 
   private boolean isValidPdfFile(MultipartFile file) {
-    return "application/pdf".equals(file.getContentType());
+    return !file.isEmpty() && "application/pdf".equals(file.getContentType());
   }
 }

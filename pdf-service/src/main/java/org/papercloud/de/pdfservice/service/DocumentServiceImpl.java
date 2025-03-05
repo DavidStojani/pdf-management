@@ -6,13 +6,11 @@ import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.common.dto.DocumentDTO;
 import org.papercloud.de.common.dto.DocumentDownloadDTO;
 import org.papercloud.de.common.dto.DocumentMapper;
 import org.papercloud.de.common.dto.DocumentUploadDTO;
-import org.papercloud.de.common.dto.PageDTO;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
@@ -55,7 +53,7 @@ public class DocumentServiceImpl implements DocumentService {
 
   @Override
   public DocumentDownloadDTO downloadDocument(Long id) {
-    DocumentPdfEntity documentPdfEntity = documentRepository.findById(id).orElseThrow(() ->  new RuntimeException("Document not found!!!"));
+    DocumentPdfEntity documentPdfEntity = documentRepository.findById(id).orElse(null);
 
     return documentMapper.toDownloadDTO(documentPdfEntity);
   }

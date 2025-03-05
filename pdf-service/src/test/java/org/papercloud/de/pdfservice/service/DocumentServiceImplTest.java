@@ -2,7 +2,7 @@ package org.papercloud.de.pdfservice.service;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -80,7 +80,6 @@ class DocumentServiceImplTest {
     when(documentRepository.findById(documentId)).thenReturn(Optional.empty());
 
     // When/Then
-    assertThrows(RuntimeException.class, () ->
-        documentService.downloadDocument(documentId));
+    assertNull(documentService.downloadDocument(documentId));
   }
 }
