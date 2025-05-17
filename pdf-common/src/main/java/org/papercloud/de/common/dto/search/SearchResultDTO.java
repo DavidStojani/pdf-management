@@ -1,4 +1,4 @@
-package org.papercloud.de.common.dto;
+package org.papercloud.de.common.dto.search;
 
 import java.util.List;
 import lombok.Builder;

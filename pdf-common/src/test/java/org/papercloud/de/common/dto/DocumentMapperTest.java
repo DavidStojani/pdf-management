@@ -2,11 +2,14 @@ package org.papercloud.de.common.dto;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.io.File;
-import java.io.InputStream;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.papercloud.de.common.dto.document.DocumentDTO;
+import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
+import org.papercloud.de.common.dto.document.DocumentMapper;
+import org.papercloud.de.common.dto.document.DocumentUploadDTO;
+import org.papercloud.de.common.dto.document.PageDTO;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
 

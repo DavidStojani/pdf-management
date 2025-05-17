@@ -35,4 +35,8 @@ public class DocumentPdfEntity {
 
   @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<PagesPdfEntity> pages;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id")
+  private UserEntity owner;
 }

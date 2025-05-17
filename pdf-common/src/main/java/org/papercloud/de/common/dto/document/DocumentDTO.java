@@ -1,4 +1,4 @@
-package org.papercloud.de.common.dto;
+package org.papercloud.de.common.dto.document;
 
 import java.time.LocalDateTime;
 import java.util.List;

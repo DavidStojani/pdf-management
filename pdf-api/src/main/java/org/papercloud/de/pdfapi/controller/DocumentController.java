@@ -4,15 +4,16 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
-import org.papercloud.de.common.dto.DocumentDTO;
-import org.papercloud.de.common.dto.DocumentDownloadDTO;
-import org.papercloud.de.common.dto.DocumentUploadDTO;
-import org.papercloud.de.pdfservice.service.DocumentService;
+import org.papercloud.de.common.dto.document.DocumentDTO;
+import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
+import org.papercloud.de.common.dto.document.DocumentUploadDTO;
+import org.papercloud.de.pdfservice.search.DocumentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,6 +39,9 @@ public class DocumentController {
       return ResponseEntity.status(400).body("Invalid file format. Only PDF files are allowed.");
     }
     try {
+
+      String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
       DocumentUploadDTO documentUploadDTO = DocumentUploadDTO.builder()
           .fileName(file.getOriginalFilename())
           .contentType(file.getContentType())
@@ -45,7 +49,7 @@ public class DocumentController {
           .inputStream(file.getInputStream())
           .build();
 
-      DocumentDTO documentDTO = documentService.processDocument(documentUploadDTO);
+      DocumentDTO documentDTO = documentService.processDocument(documentUploadDTO, username);
       return ResponseEntity.ok("Document uploaded successfully mit ID: " + documentDTO.getId());
 
     } catch (IOException e) {
@@ -56,7 +60,10 @@ public class DocumentController {
   @Operation(summary = "Download a PDF document")
   @GetMapping("/{id}/download")
   public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id) {
-    DocumentDownloadDTO document = documentService.downloadDocument(id);
+
+    String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+    DocumentDownloadDTO document = documentService.downloadDocument(username, id);
 
     if (document == null) {
       return ResponseEntity.notFound().build();
