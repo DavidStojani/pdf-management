@@ -1,6 +1,7 @@
 package org.papercloud.de.pdfapi.controller;
 
 
+import lombok.RequiredArgsConstructor;
 import org.papercloud.de.common.dto.auth.*;
 import org.papercloud.de.pdfservice.auth.AuthenticationService;
 import org.papercloud.de.pdfservice.auth.PasswordService;
@@ -9,59 +10,52 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthenticationService authenticationService;
     private final PasswordService passwordService;
     private final VerificationService verificationService;
 
-    public AuthController(
-            AuthenticationService authenticationService,
-            PasswordService passwordService,
-            VerificationService verificationService) {
-        this.authenticationService = authenticationService;
-        this.passwordService = passwordService;
-        this.verificationService = verificationService;
-    }
-
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
-        return ResponseEntity.ok(authenticationService.register(request));
+        AuthResponse response = authenticationService.register(request);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authenticationService.login(request));
+        AuthResponse response = authenticationService.login(request);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/password-reset-request")
-    public ResponseEntity<?> requestPasswordReset(@RequestBody PasswordResetRequest request) {
+    public ResponseEntity<Map<String, String>> requestPasswordReset(@RequestBody PasswordResetRequest request) {
         passwordService.initiatePasswordReset(request.getEmail());
-        return ResponseEntity.ok().body(Map.of("message", "Password reset email sent"));
+        return ResponseEntity.ok(Map.of("message", "Password reset email sent"));
     }
 
     @PostMapping("/password-reset")
-    public ResponseEntity<?> resetPassword(@RequestBody PasswordChangeRequest request) {
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody PasswordChangeRequest request) {
         passwordService.resetPassword(
                 request.getToken(),
                 request.getNewPassword(),
                 request.getConfirmPassword()
         );
-        return ResponseEntity.ok().body(Map.of("message", "Password reset successful"));
+        return ResponseEntity.ok(Map.of("message", "Password reset successful"));
     }
 
     @GetMapping("/verify-email")
-    public ResponseEntity<?> verifyEmail(@RequestParam String token) {
+    public ResponseEntity<Map<String, String>> verifyEmail(@RequestParam String token) {
         verificationService.verifyEmail(token);
-        return ResponseEntity.ok().body(Map.of("message", "Email verified successfully"));
+        return ResponseEntity.ok(Map.of("message", "Email verified successfully"));
     }
 
     @PostMapping("/resend-verification")
-    public ResponseEntity<?> resendVerification(@RequestBody EmailVerificationRequest request) {
+    public ResponseEntity<Map<String, String>> resendVerification(@RequestBody EmailVerificationRequest request) {
         verificationService.resendVerificationEmail(request.getEmail());
-        return ResponseEntity.ok().body(Map.of("message", "Verification email sent"));
+        return ResponseEntity.ok(Map.of("message", "Verification email sent"));
     }
 }

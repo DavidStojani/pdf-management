@@ -2,6 +2,7 @@ package org.papercloud.de.pdfservice.search;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.common.dto.search.SearchHitDTO;
 import org.papercloud.de.common.dto.search.SearchResultDTO;
@@ -16,62 +17,54 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DocumentSearchSimpleImpl {
 
-  private final DocumentRepository documentRepository;
-  private final PageRepository pageRepository;
+    private final DocumentRepository documentRepository;
+    private final PageRepository pageRepository;
 
-  @Transactional(readOnly = true)
-  public SearchResultDTO searchDocumentByText(String searchTerm) {
+    @Transactional(readOnly = true)
+    public SearchResultDTO searchDocumentByText(String searchTerm) {
+        List<PagesPdfEntity> matchingPages = pageRepository.findByExtractedTextContaining(searchTerm);
 
-    List<PagesPdfEntity> matchingPages = pageRepository.findByExtractedTextContaining(searchTerm);
-    List<SearchHitDTO> searchHits = matchingPages.stream()
-        .map(p -> mapToSearchHit(p, searchTerm))
-        .collect(Collectors.toList());
+        List<SearchHitDTO> searchHits = matchingPages.stream()
+                .map(page -> mapToSearchHit(page, searchTerm))
+                .collect(Collectors.toList());
 
-  return SearchResultDTO.builder()
-      .hits(searchHits)
-      .totalHits(matchingPages.size())
-      .totalPages(matchingPages.size())
-      .currentPage(999)
-      .build();
-
-  }
-
-  private SearchHitDTO mapToSearchHit(PagesPdfEntity page, String searchTerm) {
-    DocumentPdfEntity doc = page.getDocument();
-
-    // Extract a snippet of text surrounding the search term
-    String snippet = extractSnippet(page.getPageText(), searchTerm);
-
-    return SearchHitDTO.builder()
-        .documentId(doc.getId().toString())
-        .documentName(doc.getTitle())
-        .pageNumber(page.getPageNumber())
-        .textSnippet(snippet)
-        .build();
-  }
-
-  private String extractSnippet(String text, String searchTerm) {
-    // Find the position of the search term
-    int pos = text.toLowerCase().indexOf(searchTerm.toLowerCase());
-    if (pos == -1) {
-      return "";
+        return SearchResultDTO.builder()
+                .hits(searchHits)
+                .totalHits(searchHits.size())
+                .totalPages(1) // Placeholder for future pagination logic
+                .currentPage(1)
+                .build();
     }
 
-    // Extract context around the term (100 chars before and after)
-    int start = Math.max(0, pos - 100);
-    int end = Math.min(text.length(), pos + searchTerm.length() + 100);
+    private SearchHitDTO mapToSearchHit(PagesPdfEntity page, String searchTerm) {
+        DocumentPdfEntity document = page.getDocument();
 
-    String snippet = text.substring(start, end);
-
-    // Add ellipsis if needed
-    if (start > 0) {
-      snippet = "..." + snippet;
-    }
-    if (end < text.length()) {
-      snippet = snippet + "...";
+        return SearchHitDTO.builder()
+                .documentId(document.getId().toString())
+                .documentName(document.getTitle())
+                .pageNumber(page.getPageNumber())
+                .textSnippet(extractSnippet(page.getPageText(), searchTerm))
+                .build();
     }
 
-    return snippet;
-  }
+    private String extractSnippet(String text, String searchTerm) {
+        String lowerText = text.toLowerCase();
+        String lowerSearchTerm = searchTerm.toLowerCase();
 
+        int index = lowerText.indexOf(lowerSearchTerm);
+        if (index == -1) return "";
+
+        final int CONTEXT_CHARS = 100;
+
+        int snippetStart = Math.max(0, index - CONTEXT_CHARS);
+        int snippetEnd = Math.min(text.length(), index + searchTerm.length() + CONTEXT_CHARS);
+
+        String snippet = text.substring(snippetStart, snippetEnd);
+
+        if (snippetStart > 0) snippet = "..." + snippet;
+        if (snippetEnd < text.length()) snippet += "...";
+
+        return snippet;
+    }
 }
+

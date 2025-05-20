@@ -7,6 +7,9 @@ import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.common.dto.document.DocumentDTO;
@@ -23,26 +26,25 @@ import org.papercloud.de.pdfservice.utils.PdfTextExtractorService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StreamUtils;
-
 @Service
 @RequiredArgsConstructor
 public class DocumentServiceImpl implements DocumentService {
 
+    private final UserRepository userRepository;
     private final DocumentRepository documentRepository;
     private final PageRepository pageRepository;
     private final PdfTextExtractorService pdfTextExtractorService;
     private final DocumentMapper documentMapper;
-    private final UserRepository userRepository;
 
     @Override
     @Transactional
-    public DocumentDTO processDocument(DocumentUploadDTO documentUploadDTO, String username) throws IOException {
-        byte[] pdfBytes = extractBytesFromInputStream(documentUploadDTO.getInputStream());
+    public DocumentDTO processDocument(DocumentUploadDTO uploadDTO, String username) throws IOException {
+        byte[] pdfBytes = extractBytes(uploadDTO.getInputStream());
 
-        UserEntity user = userRepository.findByUsername(username).get();
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
 
-        DocumentPdfEntity documentEntity = saveDocument(user, documentUploadDTO, pdfBytes);
-
+        DocumentPdfEntity documentEntity = saveDocumentEntity(user, uploadDTO, pdfBytes);
         extractAndSavePages(documentEntity, pdfBytes);
 
         return documentMapper.toDocumentDTO(documentEntity);
@@ -50,68 +52,64 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public DocumentDTO getDocument(Long id) {
+        // TODO: implement
         return null;
     }
 
     @Override
     public byte[] getDocumentContent(Long id) {
+        // TODO: implement
         return new byte[0];
     }
 
     @Override
-    public DocumentDownloadDTO downloadDocument(String username, Long id) {
-        DocumentPdfEntity documentPdfEntity = documentRepository.findById(id).orElse(null);
+    public DocumentDownloadDTO downloadDocument(String username, Long id) throws AccessDeniedException {
+        DocumentPdfEntity document = documentRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Document not found with id: " + id));
 
-        if (!documentPdfEntity.getOwner().getUsername().equals(username)) {
-            try {
-                throw new AccessDeniedException("You are not allowed to access this document.");
-            } catch (AccessDeniedException e) {
-                throw new RuntimeException(e);
-            }
+        if (!document.getOwner().getUsername().equals(username)) {
+            throw new AccessDeniedException("You are not allowed to access this document.");
         }
 
-        return documentMapper.toDownloadDTO(documentPdfEntity);
+        return documentMapper.toDownloadDTO(document);
     }
 
-    private byte[] extractBytesFromInputStream(InputStream inputStream) throws IOException {
+    private byte[] extractBytes(InputStream inputStream) throws IOException {
         return StreamUtils.copyToByteArray(inputStream);
     }
 
-    private DocumentPdfEntity saveDocument(UserEntity user, DocumentUploadDTO file, byte[] pdfBytes) {
-
-        DocumentPdfEntity documentEntity = DocumentPdfEntity.builder()
-                .title(extractTitle(file))
-                .filename(file.getFileName())
-                .contentType(file.getContentType())
+    private DocumentPdfEntity saveDocumentEntity(UserEntity user, DocumentUploadDTO uploadDTO, byte[] pdfBytes) {
+        DocumentPdfEntity document = DocumentPdfEntity.builder()
+                .title(extractTitle(uploadDTO))
+                .filename(uploadDTO.getFileName())
+                .contentType(uploadDTO.getContentType())
                 .pdfContent(pdfBytes)
-                .size(file.getSize())
+                .size(uploadDTO.getSize())
                 .owner(user)
                 .uploadedAt(LocalDateTime.now())
                 .build();
 
-        return documentRepository.save(documentEntity);
+        return documentRepository.save(document);
     }
 
-    private List<PagesPdfEntity> extractAndSavePages(DocumentPdfEntity document, byte[] pdfBytes)
-            throws IOException {
-        List<String> textByPage = pdfTextExtractorService.extractTextFromPdf(
-                new ByteArrayInputStream(pdfBytes));
-        List<PagesPdfEntity> pagesPdfEntityList = new ArrayList<>();
+    private void extractAndSavePages(DocumentPdfEntity document, byte[] pdfBytes) throws IOException {
+        List<String> pageTexts = pdfTextExtractorService.extractTextFromPdf(new ByteArrayInputStream(pdfBytes));
 
-        for (int i = 0; i < textByPage.size(); i++) {
-            PagesPdfEntity pagesPdfEntity = PagesPdfEntity.builder()
-                    .document(document)
-                    .pageNumber(i + 1)
-                    .pageText(textByPage.get(i)).build();
+        List<PagesPdfEntity> pages = IntStream.range(0, pageTexts.size())
+                .mapToObj(i -> PagesPdfEntity.builder()
+                        .document(document)
+                        .pageNumber(i + 1)
+                        .pageText(pageTexts.get(i))
+                        .build())
+                .collect(Collectors.toList());
 
-            pagesPdfEntityList.add(pagesPdfEntity);
-        }
-        return pageRepository.saveAll(pagesPdfEntityList);
+        pageRepository.saveAll(pages);
     }
 
-    private String extractTitle(DocumentUploadDTO file) {
-        // TODO: Extract metadata title if available
-        return file.getFileName();
+    private String extractTitle(DocumentUploadDTO uploadDTO) {
+        // TODO: Optionally extract title from metadata
+        return uploadDTO.getFileName();
     }
 }
+
 

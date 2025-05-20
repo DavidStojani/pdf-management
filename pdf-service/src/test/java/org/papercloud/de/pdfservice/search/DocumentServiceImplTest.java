@@ -1,12 +1,12 @@
 package org.papercloud.de.pdfservice.search;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,8 +16,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.common.dto.document.DocumentMapper;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
+import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
-
 @ExtendWith(MockitoExtension.class)
 class DocumentServiceImplTest {
 
@@ -30,21 +30,29 @@ class DocumentServiceImplTest {
   @InjectMocks
   private DocumentServiceImpl documentService;
 
-  // Test structure for download functionality
+  // Download success
   @Test
-  void downloadDocument_whenDocumentExists_shouldReturnDownloadDTO() {
+  void downloadDocument_whenDocumentExistsAndUserIsOwner_shouldReturnDownloadDTO() {
     // Given
     Long documentId = 1L;
-    DocumentPdfEntity entity = createSampleEntity();
+    String username = "testuser";
+
+    DocumentPdfEntity entity = createSampleEntity(username);
     DocumentDownloadDTO expectedDto = createSampleDownloadDTO();
 
     when(documentRepository.findById(documentId)).thenReturn(Optional.of(entity));
     when(documentMapper.toDownloadDTO(entity)).thenReturn(expectedDto);
 
     // When
-    DocumentDownloadDTO result = documentService.downloadDocument("test",documentId);
+      DocumentDownloadDTO result = null;
+      try {
+          result = documentService.downloadDocument(username, documentId);
+      } catch (AccessDeniedException e) {
+          throw new RuntimeException(e);
+      }
 
-    // Then
+      // Then
+    assertNotNull(result);
     assertEquals(expectedDto.getId(), result.getId());
     assertEquals(expectedDto.getFileName(), result.getFileName());
     assertArrayEquals(expectedDto.getContent(), result.getContent());
@@ -52,34 +60,58 @@ class DocumentServiceImplTest {
     verify(documentMapper).toDownloadDTO(entity);
   }
 
-  private DocumentDownloadDTO createSampleDownloadDTO() {
-    return DocumentDownloadDTO.builder()
-        .id(1L)
-        .size(1024L)
-        .content("PDF content".getBytes())
-        .contentType("application/pdf")
-        .fileName("test.pdf")
-        .build();
+  // Not found
+  @Test
+  void downloadDocument_whenDocumentNotFound_shouldThrowNoSuchElementException() {
+    // Given
+    Long documentId = 1L;
+    when(documentRepository.findById(documentId)).thenReturn(Optional.empty());
+
+    // When / Then
+    assertThrows(NoSuchElementException.class, () ->
+            documentService.downloadDocument("anyuser", documentId)
+    );
   }
 
-  private DocumentPdfEntity createSampleEntity() {
+  // Access denied
+  @Test
+  void downloadDocument_whenUserIsNotOwner_shouldThrowAccessDeniedException() {
+    // Given
+    Long documentId = 1L;
+    DocumentPdfEntity entity = createSampleEntity("owneruser");
+    when(documentRepository.findById(documentId)).thenReturn(Optional.of(entity));
+
+    // When / Then
+    assertThrows(AccessDeniedException.class, () ->
+            documentService.downloadDocument("intruder", documentId)
+    );
+  }
+
+  // === Test helpers ===
+
+  private DocumentDownloadDTO createSampleDownloadDTO() {
+    return DocumentDownloadDTO.builder()
+            .id(1L)
+            .size(1024L)
+            .content("PDF content".getBytes())
+            .contentType("application/pdf")
+            .fileName("test.pdf")
+            .build();
+  }
+
+  private DocumentPdfEntity createSampleEntity(String ownerUsername) {
+    UserEntity owner = new UserEntity();
+    owner.setUsername(ownerUsername);
+
     DocumentPdfEntity entity = new DocumentPdfEntity();
     entity.setId(1L);
     entity.setFilename("test.pdf");
     entity.setPdfContent("PDF content".getBytes());
     entity.setContentType("application/pdf");
     entity.setSize(1024L);
-    entity.setUploadedAt(LocalDateTime.of(2023, 8, 1, 12, 0, 0));
+    entity.setUploadedAt(LocalDateTime.of(2023, 8, 1, 12, 0));
+    entity.setOwner(owner);
+
     return entity;
-  }
-
-  @Test
-  void downloadDocument_whenDocumentNotFound_shouldThrowException() {
-    // Given
-    Long documentId = 1L;
-    when(documentRepository.findById(documentId)).thenReturn(Optional.empty());
-
-    // When/Then
-    assertNull(documentService.downloadDocument("testuser",documentId));
   }
 }

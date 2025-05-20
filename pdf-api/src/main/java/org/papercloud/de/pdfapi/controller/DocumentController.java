@@ -2,7 +2,11 @@ package org.papercloud.de.pdfapi.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
+import java.util.Map;
+
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.common.dto.document.DocumentDTO;
 import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
@@ -11,6 +15,7 @@ import org.papercloud.de.pdfservice.search.DocumentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,64 +33,69 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class DocumentController {
 
-  private static final Logger logger = LoggerFactory.getLogger(DocumentController.class);
-  private final DocumentService documentService;
+    private static final Logger logger = LoggerFactory.getLogger(DocumentController.class);
+    private final DocumentService documentService;
 
+    @Operation(summary = "Upload a PDF document")
+    @PostMapping("/upload")
+    public ResponseEntity<Map<String, String>> uploadPdf(@RequestParam("file") MultipartFile file) {
+        if (!isValidPdf(file)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid file format. Only PDF files are allowed."));
+        }
 
-  @Operation(summary = "Upload a PDF document")
-  @PostMapping("/upload")
-  public ResponseEntity<String> uploadPdf(@RequestParam("file") MultipartFile file) {
-    if (!isValidPdfFile(file)) {
-      return ResponseEntity.status(400).body("Invalid file format. Only PDF files are allowed.");
-    }
-    try {
+        try {
+            String username = getCurrentUsername();
 
-      String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            DocumentUploadDTO documentUploadDTO = DocumentUploadDTO.builder()
+                    .fileName(file.getOriginalFilename())
+                    .contentType(file.getContentType())
+                    .size(file.getSize())
+                    .inputStream(file.getInputStream())
+                    .build();
 
-      DocumentUploadDTO documentUploadDTO = DocumentUploadDTO.builder()
-          .fileName(file.getOriginalFilename())
-          .contentType(file.getContentType())
-          .size(file.getSize())
-          .inputStream(file.getInputStream())
-          .build();
+            DocumentDTO savedDocument = documentService.processDocument(documentUploadDTO, username);
 
-      DocumentDTO documentDTO = documentService.processDocument(documentUploadDTO, username);
-      return ResponseEntity.ok("Document uploaded successfully mit ID: " + documentDTO.getId());
-
-    } catch (IOException e) {
-      return ResponseEntity.status(500).body("Error uploading file: " + e.getMessage());
-    }
-  }
-
-  @Operation(summary = "Download a PDF document")
-  @GetMapping("/{id}/download")
-  public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id) {
-
-    String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
-    DocumentDownloadDTO document = documentService.downloadDocument(username, id);
-
-    if (document == null) {
-      return ResponseEntity.notFound().build();
+            return ResponseEntity.ok(Map.of(
+                    "message", "Document uploaded successfully",
+                    "documentId", savedDocument.getId().toString()
+            ));
+        } catch (IOException e) {
+            logger.error("File upload error", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error uploading file: " + e.getMessage()));
+        }
     }
 
-    return ResponseEntity.ok()
-        .header(HttpHeaders.CONTENT_DISPOSITION,
-            "attachment; filename=\"" + document.getFileName() + "\"")
-        .contentType(MediaType.parseMediaType(document.getContentType()))
-        .contentLength(document.getSize())
-        .body(document.getContent());
-  }
+    @Operation(summary = "Download a PDF document")
+    @GetMapping("/{id}/download")
+    public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id) throws AccessDeniedException {
+        String username = getCurrentUsername();
+        DocumentDownloadDTO document = documentService.downloadDocument(username, id);
 
+        if (document == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
 
-  // Simple endpoint to test basic connectivity
-  @GetMapping("/ping")
-  public ResponseEntity<String> ping() {
-    logger.info("Ping endpoint called");
-    return ResponseEntity.ok("Pong! Server is running");
-  }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + document.getFileName() + "\"")
+                .contentType(MediaType.parseMediaType(document.getContentType()))
+                .contentLength(document.getSize())
+                .body(document.getContent());
+    }
 
-  private boolean isValidPdfFile(MultipartFile file) {
-    return !file.isEmpty() && "application/pdf".equals(file.getContentType());
-  }
+    @GetMapping("/ping")
+    public ResponseEntity<Map<String, String>> ping() {
+        logger.info("Ping endpoint called");
+        return ResponseEntity.ok(Map.of("message", "Pong! Server is running"));
+    }
+
+    // ========== Private Helpers ==========
+
+    private boolean isValidPdf(MultipartFile file) {
+        return !file.isEmpty() && "application/pdf".equalsIgnoreCase(file.getContentType());
+    }
+
+    private String getCurrentUsername() {
+        return SecurityContextHolder.getContext().getAuthentication().getName();
+    }
 }
