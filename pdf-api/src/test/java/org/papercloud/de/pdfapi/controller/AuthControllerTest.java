@@ -3,7 +3,6 @@ package org.papercloud.de.pdfapi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.papercloud.de.common.dto.auth.LoginRequest;
@@ -53,9 +52,8 @@ class AuthControllerIntegrationTest {
     @BeforeEach
     void setUp() {
         // Clean up existing test user if exists
-        userRepository.findByUsername("integrationtestuser").ifPresent(user -> {
-            userRepository.delete(user);
-        });
+        userRepository.findByUsername("integrationtestuser").ifPresent(user ->
+                userRepository.delete(user));
 
         // Ensure roles exist
         if (roleRepository.findByName("ROLE_USER").isEmpty()) {
@@ -88,19 +86,18 @@ class AuthControllerIntegrationTest {
     }
 
     /**
-    @Test
-    @Ignore
-    void register_WithExistingUsername_ShouldReturnBadRequest() throws Exception {
-
-        // Create a user first
-        createTestUser();
-
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(registerRequest)))
-                .andExpect(status().isBadRequest());
-    }
-*/
+     * @Test
+     * @Ignore void register_WithExistingUsername_ShouldReturnBadRequest() throws Exception {
+     * <p>
+     * // Create a user first
+     * createTestUser();
+     * <p>
+     * mockMvc.perform(post("/api/auth/register")
+     * .contentType(MediaType.APPLICATION_JSON)
+     * .content(objectMapper.writeValueAsString(registerRequest)))
+     * .andExpect(status().isBadRequest());
+     * }
+     */
     @Test
     void login_WithValidCredentials_ShouldReturnToken() throws Exception {
         // Create a user first

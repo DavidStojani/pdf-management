@@ -1,7 +1,6 @@
 package org.papercloud.de.pdfservice.search;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,7 +22,7 @@ import org.papercloud.de.pdfdatabase.repository.UserRepository;
 import org.papercloud.de.pdfservice.utils.PdfTextExtractorService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StreamUtils;
+
 @Service
 @RequiredArgsConstructor
 public class DocumentServiceImpl implements DocumentService {
@@ -68,10 +67,6 @@ public class DocumentServiceImpl implements DocumentService {
         }
 
         return documentMapper.toDownloadDTO(document);
-    }
-
-    private byte[] extractBytes(InputStream inputStream) throws IOException {
-        return StreamUtils.copyToByteArray(inputStream);
     }
 
     private DocumentPdfEntity saveDocumentEntity(UserEntity user, DocumentUploadDTO uploadDTO, byte[] pdfBytes) {

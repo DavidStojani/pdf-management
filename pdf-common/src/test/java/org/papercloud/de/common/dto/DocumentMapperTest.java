@@ -15,7 +15,7 @@ import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
 
 class DocumentMapperTest {
 
-  private DocumentMapper documentMapper = Mappers.getMapper(DocumentMapper.class);
+  private final DocumentMapper documentMapper = Mappers.getMapper(DocumentMapper.class);
 
   @Test
   void toDocumentDTO() {
