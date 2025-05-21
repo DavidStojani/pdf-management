@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.papercloud.de.pdfsecurity.filter.JwtRequestFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -17,7 +18,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -27,25 +27,33 @@ public class SecurityConfig {
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
+            // 1. We’re a stateless REST API, so disable CSRF and HTTP sessions
             .csrf(csrf -> csrf.disable())
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+            // 2. Define our authorization rules
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/auth/**").permitAll()                  // Public: login, register
-                    .requestMatchers("/api/documents/ping").permitAll()          // Health-check ping
-                    .requestMatchers("/api/public/**").permitAll()               // Optional public files
-                    .requestMatchers("/api/admin/**").hasRole("ADMIN")           // Admin access
-                    .requestMatchers("/api/documents/**").authenticated()        // PROTECT upload/download
-                    .anyRequest().authenticated()                                // Everything else secured
+                    // 2a. Allow anyone to register or login
+                    .requestMatchers("/api/auth/**").permitAll()
+                    // 2b. Allow anyone to hit the ping endpoint
+                    .requestMatchers("/api/documents/ping").permitAll()
+                    // 2c. All other /api/documents/** endpoints require a valid JWT
+                    .requestMatchers("/api/documents/**").authenticated()
+                    // 2d. (Catch-all) any other request also needs authentication
+                    .anyRequest().authenticated()
             )
+
+            // 3. Handle auth errors with our custom entry point (returns JSON 401)
             .exceptionHandling(ex -> ex
                     .authenticationEntryPoint(jwtAuthenticationEntryPoint)
             )
-            .sessionManagement(session -> session
-                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
+
+            // 4. Plug in our JWT filter before Spring’s username/password filter
             .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
   }
+
 
   @Bean
   public PasswordEncoder passwordEncoder() {
@@ -57,3 +65,4 @@ public class SecurityConfig {
     return authConfig.getAuthenticationManager();
   }
 }
+

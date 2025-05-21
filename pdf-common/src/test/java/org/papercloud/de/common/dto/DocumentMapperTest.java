@@ -71,7 +71,7 @@ class DocumentMapperTest {
     assertEquals(documentUploadDTO.getFileName(), documentPdfEntity.getFilename());
     assertEquals(documentUploadDTO.getContentType(), documentPdfEntity.getContentType());
     assertEquals(documentUploadDTO.getSize(), documentPdfEntity.getSize());
-    assertEquals(documentUploadDTO.getInputStream(), documentPdfEntity.getPdfContent());
+    assertEquals(documentUploadDTO.getInputPdfBytes(), documentPdfEntity.getPdfContent());
   }
 
   @Test

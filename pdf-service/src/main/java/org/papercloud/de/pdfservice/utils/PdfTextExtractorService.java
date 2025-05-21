@@ -6,5 +6,5 @@ import java.util.List;
 
 
 public interface PdfTextExtractorService {
-  List<String> extractTextFromPdf(InputStream pdfInputStream) throws IOException;
+  List<String> extractTextFromPdf(byte[] pdfByte) throws IOException;
 }
