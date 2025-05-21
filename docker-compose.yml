@@ -1,44 +1,24 @@
-version: '3.8'
+# docker-compose-app.yml
+version: "3.9"
 
 services:
-  postgres:
-    image: postgres:15
-    container_name: postgres-db
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: pdf_management
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
-    ports:
-      - "9090:80"  # Maps localhost:9090 to pgAdmin's internal port 80
-    depends_on:
-      - postgres
-    restart: always
-
-  pdf-api:
+  springboot-app:
     build:
       context: .
       dockerfile: services/Dockerfiles/api/Dockerfile
-    depends_on:
-      - postgres
+    container_name: springboot-app
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/pdf_management
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pdf_management
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: admin
     ports:
       - "8080:8080"
-      - "5005:5005"  # Expose debug port
-    restart: unless-stopped
+      - "5005:5005"
+    networks:
+      - backend
 
-volumes:
-  postgres-data:
+    volumes:
+      - /home/stojani/Downloads:/mnt/Downloads
+networks:
+  backend:
+    external: true
