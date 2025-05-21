@@ -49,7 +49,11 @@ public class UserEntity {
       inverseJoinColumns = @JoinColumn(name = "role_id")
   )
   private Set<RoleEntity> roles;
+
   private boolean enabled;
+
+  @Column(name = "folderPath")
+  private String folderPath;
 
   @Column(name = "created_at")
   @Temporal(TemporalType.TIMESTAMP)

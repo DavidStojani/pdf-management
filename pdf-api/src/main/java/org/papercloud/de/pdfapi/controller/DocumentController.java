@@ -11,7 +11,9 @@ import lombok.RequiredArgsConstructor;
 import org.papercloud.de.common.dto.document.DocumentDTO;
 import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.common.dto.document.DocumentUploadDTO;
+import org.papercloud.de.common.dto.document.FolderPathDTO;
 import org.papercloud.de.pdfservice.search.DocumentService;
+import org.papercloud.de.pdfservice.utils.FolderScannerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -19,12 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
@@ -35,6 +32,7 @@ public class DocumentController {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentController.class);
     private final DocumentService documentService;
+    private final FolderScannerService folderScannerService;
 
     @Operation(summary = "Upload a PDF document")
     @PostMapping("/upload")
@@ -50,7 +48,7 @@ public class DocumentController {
                     .fileName(file.getOriginalFilename())
                     .contentType(file.getContentType())
                     .size(file.getSize())
-                    .inputStream(file.getInputStream())
+                    .inputPdfBytes(file.getBytes())
                     .build();
 
             DocumentDTO savedDocument = documentService.processDocument(documentUploadDTO, username);
@@ -86,8 +84,23 @@ public class DocumentController {
     @GetMapping("/ping")
     public ResponseEntity<Map<String, String>> ping() {
         logger.info("Ping endpoint called");
+        // scan the folder immediately
+
         return ResponseEntity.ok(Map.of("message", "Pong! Server is running"));
     }
+
+    @PostMapping("/folder")
+    public ResponseEntity<Map<String, String>> setUserFolder(@RequestBody FolderPathDTO request) {
+
+        String username = getCurrentUsername();
+        //folderScannerService.scanUserFolder(username, request.getFolderPath());
+
+        // scan the folder immediately
+        folderScannerService.scanUserFolder(username, request.getFolderPath());
+
+        return ResponseEntity.ok(Map.of("message", request.getFolderPath()));
+    }
+
 
     // ========== Private Helpers ==========
 
