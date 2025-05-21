@@ -26,7 +26,7 @@ public interface DocumentMapper {
 
   // Map from upload DTO to entity
   @Mapping(source = "fileName", target = "filename")
-  @Mapping(source = "inputStream", target = "pdfContent", qualifiedByName = "inputStreamToByteArray")
+  @Mapping(source = "inputPdfBytes", target = "pdfContent")
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "uploadedAt", expression = "java(java.time.LocalDateTime.now())")
   @Mapping(target = "pages", ignore = true)

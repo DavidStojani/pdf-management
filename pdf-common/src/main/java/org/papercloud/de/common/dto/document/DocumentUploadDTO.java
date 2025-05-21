@@ -1,6 +1,5 @@
 package org.papercloud.de.common.dto.document;
 
-import java.io.InputStream;
 import lombok.Builder;
 import lombok.Data;
 
@@ -10,5 +9,5 @@ public class DocumentUploadDTO  {
   private String fileName;
   private String contentType;
   private long size;
-  private InputStream inputStream;
+  private byte[] inputPdfBytes;
 }

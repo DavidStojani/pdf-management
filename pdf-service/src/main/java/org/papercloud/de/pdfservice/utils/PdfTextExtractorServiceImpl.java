@@ -14,11 +14,7 @@ import org.springframework.stereotype.Service;
 public class PdfTextExtractorServiceImpl implements PdfTextExtractorService {
 
   @Override
-  public List<String> extractTextFromPdf(InputStream pdfInputStream) throws IOException {
-    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    pdfInputStream.transferTo(outputStream);
-    byte[] pdfBytes = outputStream.toByteArray();
-
+  public List<String> extractTextFromPdf(byte[] pdfBytes) throws IOException {
     // Load document
     try (PDDocument document = Loader.loadPDF(pdfBytes)) {
       PDFTextStripper stripper = new PDFTextStripper();

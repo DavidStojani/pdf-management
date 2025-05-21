@@ -1,11 +1,9 @@
 package org.papercloud.de.pdfservice.search;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
@@ -39,13 +37,11 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public DocumentDTO processDocument(DocumentUploadDTO uploadDTO, String username) throws IOException {
-        byte[] pdfBytes = extractBytes(uploadDTO.getInputStream());
-
         UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
 
-        DocumentPdfEntity documentEntity = saveDocumentEntity(user, uploadDTO, pdfBytes);
-        extractAndSavePages(documentEntity, pdfBytes);
+        DocumentPdfEntity documentEntity = saveDocumentEntity(user, uploadDTO, uploadDTO.getInputPdfBytes());
+        extractAndSavePages(documentEntity, uploadDTO.getInputPdfBytes());
 
         return documentMapper.toDocumentDTO(documentEntity);
     }
@@ -93,7 +89,7 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     private void extractAndSavePages(DocumentPdfEntity document, byte[] pdfBytes) throws IOException {
-        List<String> pageTexts = pdfTextExtractorService.extractTextFromPdf(new ByteArrayInputStream(pdfBytes));
+        List<String> pageTexts = pdfTextExtractorService.extractTextFromPdf(pdfBytes);
 
         List<PagesPdfEntity> pages = IntStream.range(0, pageTexts.size())
                 .mapToObj(i -> PagesPdfEntity.builder()
