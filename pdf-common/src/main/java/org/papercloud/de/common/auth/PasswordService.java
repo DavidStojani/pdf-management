@@ -1,4 +1,4 @@
-package org.papercloud.de.pdfservice.auth;
+package org.papercloud.de.common.auth;
 
 public interface PasswordService {
     void initiatePasswordReset(String email);

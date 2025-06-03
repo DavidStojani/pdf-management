@@ -1,4 +1,4 @@
-package org.papercloud.de.pdfservice.utils;
+package org.papercloud.de.pdfservice.textutils;
 
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.common.dto.document.DocumentUploadDTO;

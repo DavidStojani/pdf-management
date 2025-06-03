@@ -13,7 +13,7 @@ import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.common.dto.document.DocumentUploadDTO;
 import org.papercloud.de.common.dto.document.FolderPathDTO;
 import org.papercloud.de.pdfservice.search.DocumentService;
-import org.papercloud.de.pdfservice.utils.FolderScannerService;
+import org.papercloud.de.pdfservice.textutils.FolderScannerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -84,8 +84,6 @@ public class DocumentController {
     @GetMapping("/ping")
     public ResponseEntity<Map<String, String>> ping() {
         logger.info("Ping endpoint called");
-        // scan the folder immediately
-
         return ResponseEntity.ok(Map.of("message", "Pong! Server is running"));
     }
 
@@ -93,9 +91,6 @@ public class DocumentController {
     public ResponseEntity<Map<String, String>> setUserFolder(@RequestBody FolderPathDTO request) {
 
         String username = getCurrentUsername();
-        //folderScannerService.scanUserFolder(username, request.getFolderPath());
-
-        // scan the folder immediately
         folderScannerService.scanUserFolder(username, request.getFolderPath());
 
         return ResponseEntity.ok(Map.of("message", request.getFolderPath()));

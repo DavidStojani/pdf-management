@@ -1,0 +1,29 @@
+# application-test.yml
+spring:
+  datasource:
+    # These will be overridden by Testcontainers
+    url: jdbc:postgresql://localhost:5432/testdb
+    username: test
+    password: test
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Mock JWT configuration for testing
+          jwk-set-uri: http://localhost:8080/auth/realms/test/protocol/openid_connect/certs
+
+logging:
+  level:
+    com.yourcompany.yourproject: DEBUG
+    org.testcontainers: INFO
+    org.springframework.security: DEBUG

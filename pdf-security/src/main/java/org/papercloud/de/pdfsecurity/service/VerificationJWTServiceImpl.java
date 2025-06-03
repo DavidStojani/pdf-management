@@ -3,7 +3,7 @@ package org.papercloud.de.pdfsecurity.service;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.entity.VerificationTokenEntity;
 import org.papercloud.de.pdfdatabase.repository.UserRepository;
-import org.papercloud.de.pdfservice.auth.VerificationService;
+import org.papercloud.de.common.auth.VerificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

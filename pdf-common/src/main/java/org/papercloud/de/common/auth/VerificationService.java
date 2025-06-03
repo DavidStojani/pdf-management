@@ -1,4 +1,4 @@
-package org.papercloud.de.pdfservice.auth;
+package org.papercloud.de.common.auth;
 
 public interface VerificationService {
     void verifyEmail(String token);

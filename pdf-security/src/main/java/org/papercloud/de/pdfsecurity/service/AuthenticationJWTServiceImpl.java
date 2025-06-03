@@ -8,7 +8,7 @@ import org.papercloud.de.pdfdatabase.entity.RoleEntity;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.RoleRepository;
 import org.papercloud.de.pdfdatabase.repository.UserRepository;
-import org.papercloud.de.pdfservice.auth.AuthenticationService;
+import org.papercloud.de.common.auth.AuthenticationService;
 import org.papercloud.de.pdfsecurity.util.JwtUtil;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

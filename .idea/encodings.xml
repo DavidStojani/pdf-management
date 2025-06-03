@@ -7,6 +7,8 @@
     <file url="file://$PROJECT_DIR$/pdf-common/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/pdf-database/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/pdf-database/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/pdf-orc/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/pdf-orc/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/pdf-search/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/pdf-search/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/pdf-security/src/main/java" charset="UTF-8" />

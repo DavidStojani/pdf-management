@@ -2,7 +2,7 @@ package org.papercloud.de.pdfapi.controller;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.papercloud.de.pdfservice.auth.AuthenticationService;
+import org.papercloud.de.common.auth.AuthenticationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;

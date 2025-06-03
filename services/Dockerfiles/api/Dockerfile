@@ -1,6 +1,12 @@
 # Use the official OpenJDK image
 FROM openjdk:21-ea-1-jdk-slim
 
+# Install Tesseract OCR and necessary language data (e.g., English + German)
+RUN apt-get update && \
+    apt-get install -y tesseract-ocr tesseract-ocr-eng tesseract-ocr-deu && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # Set the working directory
 WORKDIR /app
 

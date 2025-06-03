@@ -14,6 +14,7 @@
       <module>pdf-security</module>
       <module>pdf-search</module>
       <module>pdf-common</module>
+      <module>pdf-orc</module>
     </modules>
 
   <properties>
@@ -87,6 +88,20 @@
         <artifactId>mapstruct</artifactId>
         <version>1.6.0.Beta1</version>
       </dependency>
+
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>5.11.1</version>
+        <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <version>3.3.3</version>
+      </dependency>
+
     </dependencies>
   </dependencyManagement>
 

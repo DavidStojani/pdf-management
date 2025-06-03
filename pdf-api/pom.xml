@@ -19,6 +19,17 @@
         </dependency>
 
         <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-test</artifactId>
             <version>${spring-boot.version}</version>
@@ -85,16 +96,11 @@
 
         <dependency>
             <groupId>org.papercloud.de</groupId>
-            <artifactId>pdf-security</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.papercloud.de</groupId>
             <artifactId>pdf-service</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
+
     </dependencies>
     <build>
         <plugins>

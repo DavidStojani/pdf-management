@@ -19,7 +19,7 @@ import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfdatabase.repository.PageRepository;
 import org.papercloud.de.pdfdatabase.repository.UserRepository;
-import org.papercloud.de.pdfservice.utils.PdfTextExtractorService;
+import org.papercloud.de.pdfservice.textutils.PdfTextExtractorService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,7 +50,6 @@ public class DocumentServiceImpl implements DocumentService {
         // TODO: implement
         return null;
     }
-
     @Override
     public byte[] getDocumentContent(Long id) {
         // TODO: implement
