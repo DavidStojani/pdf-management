@@ -11,6 +11,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pdf_management
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: admin
+      OLLAMA_BASE_URL: http://ollama:11434
     ports:
       - "8080:8080"
       - "5005:5005"

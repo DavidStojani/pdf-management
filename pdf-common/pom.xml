@@ -43,6 +43,14 @@
       <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
+      <dependency>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-annotations</artifactId>
+      </dependency>
+      <dependency>
+          <groupId>io.projectreactor</groupId>
+          <artifactId>reactor-core</artifactId>
+      </dependency>
   </dependencies>
 
 </project>

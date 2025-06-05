@@ -15,6 +15,7 @@
       <module>pdf-search</module>
       <module>pdf-common</module>
       <module>pdf-orc</module>
+        <module>pdf-llm</module>
     </modules>
 
   <properties>

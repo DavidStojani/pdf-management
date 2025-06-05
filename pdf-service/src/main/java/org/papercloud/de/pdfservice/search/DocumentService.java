@@ -12,9 +12,5 @@ public interface DocumentService {
 
   DocumentDTO processDocument(DocumentUploadDTO file, String username) throws IOException;
 
-  DocumentDTO getDocument(Long id);
-
-  byte[] getDocumentContent(Long id);
-
   DocumentDownloadDTO downloadDocument(String username, Long id) throws AccessDeniedException;
 }

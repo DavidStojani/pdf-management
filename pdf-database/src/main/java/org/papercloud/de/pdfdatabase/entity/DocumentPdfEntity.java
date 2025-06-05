@@ -39,4 +39,8 @@ public class DocumentPdfEntity {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id")
   private UserEntity owner;
+
+  private List<String> tags; //TODO : do this better
+
+  private String dateOnDocument;
 }

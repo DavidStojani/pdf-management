@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   postgres:
     image: postgres:15
@@ -25,8 +26,20 @@ services:
     networks:
       - backend
 
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - backend
+
 volumes:
   postgres-data:
+  ollama-data:
 
 networks:
   backend:

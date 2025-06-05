@@ -5,7 +5,6 @@ import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import lombok.RequiredArgsConstructor;
@@ -19,6 +18,7 @@ import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfdatabase.repository.PageRepository;
 import org.papercloud.de.pdfdatabase.repository.UserRepository;
+import org.papercloud.de.pdfservice.processor.AsyncEnrichmentProcessor;
 import org.papercloud.de.pdfservice.textutils.PdfTextExtractorService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,34 +32,30 @@ public class DocumentServiceImpl implements DocumentService {
     private final PageRepository pageRepository;
     private final PdfTextExtractorService pdfTextExtractorService;
     private final DocumentMapper documentMapper;
-
+    private final AsyncEnrichmentProcessor asyncEnrichmentProcessor;
     @Override
-    @Transactional
     public DocumentDTO processDocument(DocumentUploadDTO uploadDTO, String username) throws IOException {
-        UserEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
+        UserEntity user = findUserOrThrow(username);
+        DocumentPdfEntity document = createDocument(user, uploadDTO);
+        List<String> pageTexts = pdfTextExtractorService.extractTextFromPdf(uploadDTO.getInputPdfBytes());
+        DocumentDTO documentDTO = persistDocument(document, pageTexts);
 
-        DocumentPdfEntity documentEntity = saveDocumentEntity(user, uploadDTO, uploadDTO.getInputPdfBytes());
-        extractAndSavePages(documentEntity, uploadDTO.getInputPdfBytes());
+        asyncEnrichmentProcessor.enrichAndPersist(documentDTO.getId(), pageTexts);
 
-        return documentMapper.toDocumentDTO(documentEntity);
+        return documentDTO;
     }
 
-    @Override
-    public DocumentDTO getDocument(Long id) {
-        // TODO: implement
-        return null;
-    }
-    @Override
-    public byte[] getDocumentContent(Long id) {
-        // TODO: implement
-        return new byte[0];
+    @Transactional
+    public DocumentDTO persistDocument(DocumentPdfEntity doc, List<String> pages) {
+        DocumentPdfEntity saved = documentRepository.save(doc);
+        savePages(saved, pages);
+
+        return documentMapper.toDocumentDTO(saved);
     }
 
     @Override
     public DocumentDownloadDTO downloadDocument(String username, Long id) throws AccessDeniedException {
-        DocumentPdfEntity document = documentRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Document not found with id: " + id));
+        DocumentPdfEntity document = getDocumentOrThrow(id);
 
         if (!document.getOwner().getUsername().equals(username)) {
             throw new AccessDeniedException("You are not allowed to access this document.");
@@ -68,38 +64,41 @@ public class DocumentServiceImpl implements DocumentService {
         return documentMapper.toDownloadDTO(document);
     }
 
-    private DocumentPdfEntity saveDocumentEntity(UserEntity user, DocumentUploadDTO uploadDTO, byte[] pdfBytes) {
+    // 🔽 --- Private Helper Methods --- 🔽
+
+    private UserEntity findUserOrThrow(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
+    }
+
+    private DocumentPdfEntity createDocument(UserEntity user, DocumentUploadDTO uploadDTO) {
         DocumentPdfEntity document = DocumentPdfEntity.builder()
-                .title(extractTitle(uploadDTO))
                 .filename(uploadDTO.getFileName())
                 .contentType(uploadDTO.getContentType())
-                .pdfContent(pdfBytes)
+                .pdfContent(uploadDTO.getInputPdfBytes())
                 .size(uploadDTO.getSize())
                 .owner(user)
                 .uploadedAt(LocalDateTime.now())
                 .build();
 
-        return documentRepository.save(document);
+        return document;
     }
 
-    private void extractAndSavePages(DocumentPdfEntity document, byte[] pdfBytes) throws IOException {
-        List<String> pageTexts = pdfTextExtractorService.extractTextFromPdf(pdfBytes);
-
+    private void savePages(DocumentPdfEntity document, List<String> pageTexts) {
         List<PagesPdfEntity> pages = IntStream.range(0, pageTexts.size())
                 .mapToObj(i -> PagesPdfEntity.builder()
                         .document(document)
                         .pageNumber(i + 1)
                         .pageText(pageTexts.get(i))
                         .build())
-                .collect(Collectors.toList());
+                .toList();
 
         pageRepository.saveAll(pages);
     }
 
-    private String extractTitle(DocumentUploadDTO uploadDTO) {
-        // TODO: Optionally extract title from metadata
-        return uploadDTO.getFileName();
+    private DocumentPdfEntity getDocumentOrThrow(Long id) {
+        return documentRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Document not found with id: " + id));
     }
+
 }
-
-
