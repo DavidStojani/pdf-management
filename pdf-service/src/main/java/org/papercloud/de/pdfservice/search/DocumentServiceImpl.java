@@ -33,6 +33,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final PdfTextExtractorService pdfTextExtractorService;
     private final DocumentMapper documentMapper;
     private final AsyncEnrichmentProcessor asyncEnrichmentProcessor;
+
     @Override
     public DocumentDTO processDocument(DocumentUploadDTO uploadDTO, String username) throws IOException {
         UserEntity user = findUserOrThrow(username);
@@ -40,7 +41,7 @@ public class DocumentServiceImpl implements DocumentService {
         List<String> pageTexts = pdfTextExtractorService.extractTextFromPdf(uploadDTO.getInputPdfBytes());
         DocumentDTO documentDTO = persistDocument(document, pageTexts);
 
-        asyncEnrichmentProcessor.enrichAndPersist(documentDTO.getId(), pageTexts);
+        asyncEnrichmentProcessor.enrichAndPersistDocument(documentDTO.getId(), pageTexts);
 
         return documentDTO;
     }
@@ -72,7 +73,7 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     private DocumentPdfEntity createDocument(UserEntity user, DocumentUploadDTO uploadDTO) {
-        DocumentPdfEntity document = DocumentPdfEntity.builder()
+        return DocumentPdfEntity.builder()
                 .filename(uploadDTO.getFileName())
                 .contentType(uploadDTO.getContentType())
                 .pdfContent(uploadDTO.getInputPdfBytes())
@@ -80,8 +81,6 @@ public class DocumentServiceImpl implements DocumentService {
                 .owner(user)
                 .uploadedAt(LocalDateTime.now())
                 .build();
-
-        return document;
     }
 
     private void savePages(DocumentPdfEntity document, List<String> pageTexts) {

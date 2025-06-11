@@ -8,7 +8,7 @@ import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 
 import org.papercloud.de.pdfservice.errors.DocumentEnrichmentException;
 import org.papercloud.de.pdfservice.errors.InvalidDocumentException;
-import org.papercloud.de.pdfservice.textutils.TextCleaningService;
+import org.papercloud.de.common.util.OcrTextCleaningService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,13 +21,13 @@ import java.util.concurrent.ExecutionException;
 public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProcessor {
 
     private final DocumentEnrichmentService documentEnrichmentService;
-    private final TextCleaningService textCleaningService;
+    private final OcrTextCleaningService ocrTextCleaningService;
 
     @Override
     public EnrichmentResultDTO enrichDocument(DocumentPdfEntity document, List<String> pageTexts) {
         validateInput(pageTexts);
 
-        String cleanedText = textCleaningService.cleanOcrText(pageTexts.get(0));
+        String cleanedText = ocrTextCleaningService.cleanOcrText(pageTexts.get(0));
         log.info("Starting document enrichment process for document ID: {}", document.getId());
 
         return performEnrichment(cleanedText);

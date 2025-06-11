@@ -1,6 +1,6 @@
 package org.papercloud.de.pdfservice.textutils;
 
-import org.springframework.context.annotation.Primary;
+import org.papercloud.de.common.util.OcrTextCleaningService;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
@@ -9,8 +9,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Component
-@Primary
-public class BasicTextCleaningServiceImpl implements TextCleaningService {
+public class BasicOcrTextCleaningServiceImpl implements OcrTextCleaningService {
 
     private static final String SEPARATOR_PATTERN = ".*[|/\\\\_~^*]{3,}.*";
     private static final String NON_STANDARD_CHARS_PATTERN = "[^\\p{L}\\p{N}\\p{P}\\p{Z}]";

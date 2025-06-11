@@ -5,11 +5,14 @@ import net.sourceforge.tess4j.TesseractException;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
+import org.papercloud.de.common.util.OcrTextCleaningService;
 import org.papercloud.de.common.util.TextExtractionStrategy;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.awt.image.RescaleOp;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +21,8 @@ import java.util.List;
 public class TessOcrExtractionStrategyImpl implements TextExtractionStrategy {
     private String tesseractDataPath = "/usr/share/tesseract-ocr/4.00/tessdata";
     private String tesseractLanguage = "deu";
+    @Autowired
+    private OcrTextCleaningService ocrTextCleaningService;
 
 
     public void setTesseractDataPath(String tesseractDataPath) {
@@ -37,7 +42,7 @@ public class TessOcrExtractionStrategyImpl implements TextExtractionStrategy {
             Tesseract tesseract = new Tesseract();
             tesseract.setDatapath(tesseractDataPath); // Adjust your tessdata path
             tesseract.setLanguage(tesseractLanguage);
-            tesseract.setVariable("dpi","300");
+            tesseract.setTessVariable("user_defined_dpi", "300");
             for (int i = 0; i < document.getNumberOfPages(); i++) {
                 // Render PDF page to high-res image
                 BufferedImage pageImage = renderer.renderImageWithDPI(i, 300);
@@ -48,7 +53,7 @@ public class TessOcrExtractionStrategyImpl implements TextExtractionStrategy {
                 // OCR with Tesseract
                 try {
                     String text = tesseract.doOCR(processedImage);
-                    textByPage.add(text);
+                    textByPage.add(ocrTextCleaningService.cleanOcrText(text));
                 } catch (TesseractException e) {
                     throw new RuntimeException("Tesseract OCR failed on page " + (i + 1), e);
                 }
@@ -64,6 +69,8 @@ public class TessOcrExtractionStrategyImpl implements TextExtractionStrategy {
         g2d.drawImage(input, 0, 0, null);
         g2d.dispose();
 
+        RescaleOp rescaleOp = new RescaleOp(1.5f, 0, null); // Increase contrast
+        grayImage = rescaleOp.filter(grayImage, null);
         // Binarization (simple thresholding)
         BufferedImage binaryImage = new BufferedImage(grayImage.getWidth(), grayImage.getHeight(), BufferedImage.TYPE_BYTE_BINARY);
         Graphics2D g = binaryImage.createGraphics();

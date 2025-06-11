@@ -1,7 +1,9 @@
 package org.papercloud.de.pdfservice.textutils;
 
 import lombok.RequiredArgsConstructor;
+import org.papercloud.de.common.util.OcrTextCleaningService;
 import org.papercloud.de.pdfservice.config.TextCleaningConfiguration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -9,7 +11,8 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class ConfigurableTextCleaningService implements TextCleaningService {
+@Primary
+public class ConfigurableTextCleaningService implements OcrTextCleaningService {
 
     private final TextCleaningConfiguration config;
 

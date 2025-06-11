@@ -17,7 +17,7 @@ public class AsyncEnrichmentProcessor {
     private final DocumentRepository documentRepository;
 
     @Async
-    public void enrichAndPersist(Long documentId, List<String> pages) {
+    public void enrichAndPersistDocument(Long documentId, List<String> pages) {
         DocumentPdfEntity doc = documentRepository.findById(documentId).orElseThrow();
         EnrichmentResultDTO enrichment = enrichmentProcessor.enrichDocument(doc, pages);
 
