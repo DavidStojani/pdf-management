@@ -12,14 +12,15 @@ import org.papercloud.de.common.dto.document.DocumentDTO;
 import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.common.dto.document.DocumentMapper;
 import org.papercloud.de.common.dto.document.DocumentUploadDTO;
+import org.papercloud.de.common.events.DocumentUploadedEvent;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfdatabase.repository.PageRepository;
 import org.papercloud.de.pdfdatabase.repository.UserRepository;
-import org.papercloud.de.pdfservice.processor.AsyncEnrichmentProcessor;
 import org.papercloud.de.pdfservice.textutils.PdfTextExtractorService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +33,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final PageRepository pageRepository;
     private final PdfTextExtractorService pdfTextExtractorService;
     private final DocumentMapper documentMapper;
-    private final AsyncEnrichmentProcessor asyncEnrichmentProcessor;
+    private final ApplicationEventPublisher publisher;
 
     @Override
     public DocumentDTO processDocument(DocumentUploadDTO uploadDTO, String username) throws IOException {
@@ -41,7 +42,7 @@ public class DocumentServiceImpl implements DocumentService {
         List<String> pageTexts = pdfTextExtractorService.extractTextFromPdf(uploadDTO.getInputPdfBytes());
         DocumentDTO documentDTO = persistDocument(document, pageTexts);
 
-        asyncEnrichmentProcessor.enrichAndPersistDocument(documentDTO.getId(), pageTexts);
+        publisher.publishEvent(new DocumentUploadedEvent(documentDTO.getId(), pageTexts));
 
         return documentDTO;
     }

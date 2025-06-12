@@ -43,4 +43,6 @@ public class DocumentPdfEntity {
   private List<String> tags; //TODO : do this better
 
   private String dateOnDocument;
+
+  private boolean failedEnrichment = false;
 }
