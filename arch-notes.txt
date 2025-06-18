@@ -1,0 +1,37 @@
+Perfect! Given your learning goals and current setup, here's my prioritized roadmap to make this enterprise-level:
+
+**Immediate Priorities (Next 2-4 weeks):**
+
+**1. Security & Data Protection**
+- Implement database encryption at rest (PostgreSQL TDE or application-level encryption)
+- Add field-level encryption for sensitive document content using AES-256
+- Implement proper secret management (HashiCorp Vault or AWS Secrets Manager)
+- Add document access audit logging
+- Consider document retention policies and secure deletion
+
+**2. Observability Foundation**
+- Add structured logging with correlation IDs across all modules (Logback with JSON)
+- Implement distributed tracing (Micrometer Tracing with Zipkin)
+- Add comprehensive metrics (Micrometer + Prometheus)
+- Create health checks for all external dependencies (OCR, LLM, DB)
+
+**Medium Term (1-2 months):**
+
+**3. Architecture Improvements**
+- Make OCR processing asynchronous too - current sync approach will break under load
+- Implement proper event-driven architecture (consider Spring Cloud Stream or direct message broker)
+- Add circuit breakers for external calls (Resilience4j)
+- Implement proper error handling and retry mechanisms
+
+**4. Testing Strategy**
+- Achieve 80%+ code coverage with meaningful unit tests
+- Add integration tests using Testcontainers for real database/message broker testing
+- Implement contract testing between modules (Spring Cloud Contract)
+- Add performance/load testing (JMeter or Gatling)
+
+A few questions to refine the approach:
+- Are you open to adding a message broker (RabbitMQ/Kafka) for better async processing?
+- Do you want to stick with local deployment or move to cloud for learning?
+- What's your budget for tools/services?
+
+Should I elaborate on any of these areas first?

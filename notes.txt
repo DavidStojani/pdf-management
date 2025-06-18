@@ -1,0 +1,20 @@
+17 may 2025::
+
+added the user registration and login throught rest.
+
+__ App scans for new files in the given folders__
+      * in each start it scans for new files in the given folders
+      * the files are added to the correct user
+  -- to clarify what will happen :
+  the user logs in in the web browser(rest) and has the option to give a local folder over rest.
+  this path of the folder will be saved for this user.
+  this folder will be scanned for pdf files.
+  The pdf files found will be stored and proccesed as already in the upload function.
+
+
+
+  -- There should be a way to not iterate strategies. also here after a strategy returns text than we need to clean it. Q: when else will the text be cleaned ?
+
+1-  I clean the text that i read from ocr
+2-  I clean the text that i get as response from ollama
+3-  I clean the processed response of ollama to get just one json
