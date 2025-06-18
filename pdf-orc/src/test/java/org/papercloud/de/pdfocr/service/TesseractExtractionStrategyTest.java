@@ -5,16 +5,21 @@ import net.sourceforge.tess4j.TesseractException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.papercloud.de.common.util.OcrTextCleaningService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,8 +30,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Testcontainers
+@ExtendWith(MockitoExtension.class)
 public class TesseractExtractionStrategyTest {
 
+    @InjectMocks
+    private TessOcrExtractionStrategyImpl tessOcrExtractionStrategy;
+
+    @Mock
+    private OcrTextCleaningService ocrTextCleaningService;
+    @Mock
+    private Tesseract tesseract;
 
     @Container
     static GenericContainer<?> tesseractContainer = new GenericContainer<>(DockerImageName.parse("tesseractshadow/tesseract4re:latest"))
@@ -55,7 +68,6 @@ public class TesseractExtractionStrategyTest {
 
         return stdout + stderr;
     }
-    private TessOcrExtractionStrategyImpl tessOcrExtractionStrategy;
     private static String tessDataPath;
 
     @BeforeAll
@@ -68,12 +80,6 @@ public class TesseractExtractionStrategyTest {
         System.out.println("Tesseract container started successfully");
     }
 
-    @BeforeEach
-    void setUp() {
-        tessOcrExtractionStrategy = new TessOcrExtractionStrategyImpl();
-        tessOcrExtractionStrategy.setTesseractDataPath(tessDataPath);
-        tessOcrExtractionStrategy.setTesseractLanguage("eng");
-    }
 
     @Test
     void testCanProcess() {
@@ -128,6 +134,7 @@ public class TesseractExtractionStrategyTest {
         } else {
             // Skip this test if we can't create a test PDF
             System.out.println("Skipping PDF test - no test PDF available");
+            assert false;
         }
     }
 
@@ -139,7 +146,7 @@ public class TesseractExtractionStrategyTest {
             assertEquals(tessDataPath, dataPath);
 
             String language = (String) ReflectionTestUtils.getField(tessOcrExtractionStrategy, "tesseractLanguage");
-            assertEquals("eng", language);
+            assertEquals("deu", language);
 
         } catch (Exception e) {
             fail("Could not access fields: " + e.getMessage());
@@ -177,7 +184,7 @@ public class TesseractExtractionStrategyTest {
         // This is a placeholder - you would need to create actual PDF bytes
         // or load from a test resource file
         try {
-            Path testPdfPath = Paths.get("src/main/resources/lens.pdf");
+            Path testPdfPath = Paths.get("src/test/resources/lens.pdf");
             if (Files.exists(testPdfPath)) {
                 return Files.readAllBytes(testPdfPath);
             }

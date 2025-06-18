@@ -1,32 +1,30 @@
 package integration.controller;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import integration.base.BaseIntegrationTest;
 import integration.builders.DocumentTestDataBuilder;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.papercloud.de.common.dto.document.DocumentDTO;
 import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Nested;
 import org.papercloud.de.common.dto.document.DocumentUploadDTO;
 import org.papercloud.de.pdfservice.search.DocumentService;
 import org.papercloud.de.pdfservice.textutils.FolderScannerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
-import java.nio.file.AccessDeniedException;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -133,108 +131,97 @@ class DocumentControllerIntegrationTest extends BaseIntegrationTest {
         @Test
         @WithMockUser(username = "testuser")
         @DisplayName("Should successfully download existing document")
-        void shouldDownloadExistingDocument() throws AccessDeniedException {
-            // Given
+        void shouldDownloadExistingDocument() throws Exception {
             Long documentId = 1L;
             DocumentDownloadDTO mockDocument = createMockDownloadDTO();
 
-            when(documentService.downloadDocument("testuser", documentId))
-                    .thenReturn(mockDocument);
+            when(documentService.downloadDocument("testuser", documentId)).thenReturn(mockDocument);
 
-            // When
-            ResponseEntity<byte[]> response = restTemplate.getForEntity(
-                    baseUrl + "/api/documents/" + documentId + "/download",
-                    byte[].class
-            );
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_PDF);
-            assertThat(response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION))
-                    .contains("attachment");
-            assertThat(response.getBody()).isEqualTo(mockDocument.getContent());
+            mockMvc.perform(get("/api/documents/{id}/download", documentId))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, containsString("attachment")))
+                    .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                    .andExpect(content().bytes(mockDocument.getContent()));
 
             verify(documentService).downloadDocument("testuser", documentId);
         }
 
+
         @Test
         @WithMockUser(username = "testuser")
         @DisplayName("Should return 404 for non-existent document")
-        void shouldReturn404ForNonExistentDocument() throws AccessDeniedException {
+        void shouldReturn404ForNonExistentDocument() throws Exception {
             // Given
             Long documentId = 999L;
 
             when(documentService.downloadDocument("testuser", documentId))
                     .thenReturn(null);
 
-            // When
-            ResponseEntity<byte[]> response = restTemplate.getForEntity(
-                    baseUrl + "/api/documents/" + documentId + "/download",
-                    byte[].class
-            );
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        }
-    }
-
-    @Nested
-    @DisplayName("Folder Management Tests")
-    class FolderManagementTests {
-
-        @Test
-        @WithMockUser(username = "testuser")
-        @DisplayName("Should successfully set user folder")
-        void shouldSetUserFolder() throws Exception {
-            // Given
-            String folderPath = "/home/testuser/documents";
-            Map<String, String> request = Map.of("folderPath", folderPath);
-
-            doNothing().when(folderScannerService)
-                    .scanUserFolder("testuser", folderPath);
-
             // When & Then
-            mockMvc.perform(post("/api/documents/folder")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .with(csrf()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.message").value(folderPath));
+            mockMvc.perform(get("/api/documents/{id}/download", documentId))
+                    .andExpect(status().isNotFound());
 
-            verify(folderScannerService).scanUserFolder("testuser", folderPath);
+            verify(documentService).downloadDocument("testuser", documentId);
         }
     }
 
-    @Nested
-    @DisplayName("Health Check Tests")
-    class HealthCheckTests {
+        @Nested
+        @DisplayName("Folder Management Tests")
+        class FolderManagementTests {
 
-        @Test
-        @DisplayName("Should respond to ping endpoint")
-        void shouldRespondToPing() throws Exception {
-            // When & Then
-            mockMvc.perform(get("/api/documents/ping"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.message").value("Pong! Server is running"));
+            @Test
+            @WithMockUser(username = "testuser")
+            @DisplayName("Should successfully set user folder")
+            void shouldSetUserFolder() throws Exception {
+                // Given
+                String folderPath = "/home/testuser/documents";
+                Map<String, String> request = Map.of("folderPath", folderPath);
+
+                doNothing().when(folderScannerService)
+                        .scanUserFolder("testuser", folderPath);
+
+                // When & Then
+                mockMvc.perform(post("/api/documents/folder")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                                .with(csrf()))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.message").value(folderPath));
+
+                verify(folderScannerService).scanUserFolder("testuser", folderPath);
+            }
+        }
+
+        @Nested
+        @DisplayName("Health Check Tests")
+        class HealthCheckTests {
+
+            @Test
+            @DisplayName("Should respond to ping endpoint")
+            void shouldRespondToPing() throws Exception {
+                // When & Then
+                mockMvc.perform(get("/api/documents/ping"))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.message").value("Pong! Server is running"));
+            }
+        }
+
+        // ==================== HELPER METHODS ====================
+
+        private DocumentDTO createMockDocumentDTO() {
+            return DocumentDTO.builder()
+                    .id(1L)
+                    .fileName("test-document.pdf")
+                    .size(1024L)
+                    .build();
+        }
+
+        private DocumentDownloadDTO createMockDownloadDTO() {
+            return DocumentDownloadDTO.builder()
+                    .fileName("test-document.pdf")
+                    .contentType("application/pdf")
+                    .size(1024L)
+                    .content("PDF content".getBytes())
+                    .build();
         }
     }
-
-    // ==================== HELPER METHODS ====================
-
-    private DocumentDTO createMockDocumentDTO() {
-        return DocumentDTO.builder()
-                .id(1L)
-                .fileName("test-document.pdf")
-                .size(1024L)
-                .build();
-    }
-
-    private DocumentDownloadDTO createMockDownloadDTO() {
-        return DocumentDownloadDTO.builder()
-                .fileName("test-document.pdf")
-                .contentType("application/pdf")
-                .size(1024L)
-                .content("PDF content".getBytes())
-                .build();
-    }
-}

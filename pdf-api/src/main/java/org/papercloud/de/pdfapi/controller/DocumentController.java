@@ -55,8 +55,8 @@ public class DocumentController {
                     "message", "Document uploaded successfully",
                     "documentId", savedDocument.getId().toString()
             ));
-        } catch (IOException e) {
-            logger.error("File upload error", e);
+        } catch (Exception e) {
+            logger.error("Unexpected error during file upload", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Error uploading file: " + e.getMessage()));
         }
