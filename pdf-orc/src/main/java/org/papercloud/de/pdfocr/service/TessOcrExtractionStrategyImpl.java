@@ -1,5 +1,6 @@
 package org.papercloud.de.pdfocr.service;
 
+import lombok.RequiredArgsConstructor;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
 import org.apache.pdfbox.Loader;
@@ -7,7 +8,6 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.papercloud.de.common.util.OcrTextCleaningService;
 import org.papercloud.de.common.util.TextExtractionStrategy;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.awt.*;
@@ -18,20 +18,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class TessOcrExtractionStrategyImpl implements TextExtractionStrategy {
-    private String tesseractDataPath = "/usr/share/tesseract-ocr/4.00/tessdata";
-    private String tesseractLanguage = "deu";
-    @Autowired
-    private OcrTextCleaningService ocrTextCleaningService;
 
-
-    public void setTesseractDataPath(String tesseractDataPath) {
-        this.tesseractDataPath = tesseractDataPath;
-    }
-
-    public void setTesseractLanguage(String tesseractLanguage) {
-        this.tesseractLanguage = tesseractLanguage;
-    }
+    private final OcrTextCleaningService ocrTextCleaningService;
+    private final Tesseract tesseract;
 
     @Override
     public List<String> extractText(byte[] pdfBytes) throws IOException {
@@ -39,10 +30,6 @@ public class TessOcrExtractionStrategyImpl implements TextExtractionStrategy {
 
         try (PDDocument document = Loader.loadPDF(pdfBytes)) {
             PDFRenderer renderer = new PDFRenderer(document);
-            Tesseract tesseract = new Tesseract();
-            tesseract.setDatapath(tesseractDataPath); // Adjust your tessdata path
-            tesseract.setLanguage(tesseractLanguage);
-            tesseract.setTessVariable("user_defined_dpi", "300");
             for (int i = 0; i < document.getNumberOfPages(); i++) {
                 // Render PDF page to high-res image
                 BufferedImage pageImage = renderer.renderImageWithDPI(i, 300);
