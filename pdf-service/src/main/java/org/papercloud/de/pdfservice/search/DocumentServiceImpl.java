@@ -13,8 +13,10 @@ import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfdatabase.repository.PageRepository;
 import org.papercloud.de.pdfdatabase.repository.UserRepository;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
@@ -78,7 +80,12 @@ public class DocumentServiceImpl implements DocumentService {
 
     private DocumentPdfEntity getDocumentOrThrow(Long id) {
         return documentRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Document not found with id: " + id));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Document not found with id: " + id
+                        )
+                );
     }
 
 }

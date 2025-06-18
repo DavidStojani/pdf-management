@@ -18,6 +18,8 @@ import org.papercloud.de.common.dto.document.DocumentMapper;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
+import org.springframework.web.server.ResponseStatusException;
+
 @ExtendWith(MockitoExtension.class)
 class DocumentServiceImplTest {
 
@@ -68,7 +70,7 @@ class DocumentServiceImplTest {
     when(documentRepository.findById(documentId)).thenReturn(Optional.empty());
 
     // When / Then
-    assertThrows(NoSuchElementException.class, () ->
+    assertThrows(ResponseStatusException.class, () ->
             documentService.downloadDocument("anyuser", documentId)
     );
   }
