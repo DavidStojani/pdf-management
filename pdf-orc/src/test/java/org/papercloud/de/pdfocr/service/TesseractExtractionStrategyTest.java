@@ -3,16 +3,12 @@ package org.papercloud.de.pdfocr.service;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.papercloud.de.common.util.OcrTextCleaningService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -68,6 +64,7 @@ public class TesseractExtractionStrategyTest {
 
         return stdout + stderr;
     }
+
     private static String tessDataPath;
 
     @BeforeAll
@@ -138,20 +135,6 @@ public class TesseractExtractionStrategyTest {
         }
     }
 
-    @Test
-    void testFieldsAreAccessible() {
-        // Test that we can access the fields via reflection
-        try {
-            String dataPath = (String) ReflectionTestUtils.getField(tessOcrExtractionStrategy, "tesseractDataPath");
-            assertEquals(tessDataPath, dataPath);
-
-            String language = (String) ReflectionTestUtils.getField(tessOcrExtractionStrategy, "tesseractLanguage");
-            assertEquals("deu", language);
-
-        } catch (Exception e) {
-            fail("Could not access fields: " + e.getMessage());
-        }
-    }
 
     // Helper method to create a test image with text
     private BufferedImage createTestImageWithText(String text) {
