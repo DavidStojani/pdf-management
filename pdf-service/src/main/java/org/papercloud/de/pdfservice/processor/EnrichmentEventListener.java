@@ -1,6 +1,6 @@
 package org.papercloud.de.pdfservice.processor;
 
-import org.papercloud.de.common.events.DocumentUploadedEvent;
+import org.papercloud.de.common.events.EnrichmentEvent;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.springframework.context.event.EventListener;
 import org.springframework.retry.annotation.Backoff;
@@ -18,9 +18,9 @@ public class EnrichmentEventListener {
     private final DocumentEnrichmentProcessor enrichmentenrichmentProcessor;
 
     public EnrichmentEventListener(DocumentRepository documentRepository,
-                                   DocumentEnrichmentProcessor enrichmentService) {
+                                   DocumentEnrichmentProcessor enrichmentProcessor) {
         this.documentRepository = documentRepository;
-        this.enrichmentenrichmentProcessor = enrichmentService;
+        this.enrichmentenrichmentProcessor = enrichmentProcessor;
     }
 
     @Async
@@ -30,7 +30,7 @@ public class EnrichmentEventListener {
             backoff = @Backoff(delay = 5000)
     )
     @EventListener
-    public void handleDocumentUploaded(DocumentUploadedEvent event) {
+    public void handleDocumentUploaded(EnrichmentEvent event) {
         Long id = event.getDocumentId();
         List<String> pages = event.getPageTexts();
 
@@ -44,7 +44,7 @@ public class EnrichmentEventListener {
     }
 
     @Recover
-    public void recover(Exception e, DocumentUploadedEvent event) {
+    public void recover(Exception e, EnrichmentEvent event) {
         var doc = documentRepository.findById(event.getDocumentId()).orElseThrow();
         doc.setFailedEnrichment(true);
         documentRepository.save(doc);

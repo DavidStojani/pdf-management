@@ -7,7 +7,7 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @Getter
-public class DocumentUploadedEvent {
+public class EnrichmentEvent {
     private final Long documentId;
     private final List<String> pageTexts;
 }

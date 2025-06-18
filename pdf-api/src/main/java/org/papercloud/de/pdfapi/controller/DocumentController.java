@@ -42,8 +42,6 @@ public class DocumentController {
         }
 
         try {
-            String username = getCurrentUsername();
-
             DocumentUploadDTO documentUploadDTO = DocumentUploadDTO.builder()
                     .fileName(file.getOriginalFilename())
                     .contentType(file.getContentType())
@@ -51,7 +49,7 @@ public class DocumentController {
                     .inputPdfBytes(file.getBytes())
                     .build();
 
-            DocumentDTO savedDocument = documentService.processDocument(documentUploadDTO, username);
+            DocumentDTO savedDocument = documentService.processDocument(documentUploadDTO, getCurrentUsername());
 
             return ResponseEntity.ok(Map.of(
                     "message", "Document uploaded successfully",

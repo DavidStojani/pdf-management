@@ -1,4 +1,4 @@
-package org.papercloud.de.pdfservice.textutils;
+package org.papercloud.de.common.util;
 
 import java.io.IOException;
 import java.util.List;

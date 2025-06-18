@@ -3,6 +3,7 @@ package org.papercloud.de.pdfservice.textutils;
 import java.io.IOException;
 import java.util.List;
 
+import org.papercloud.de.common.util.PdfTextExtractorService;
 import org.papercloud.de.common.util.TextExtractionStrategy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

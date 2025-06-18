@@ -1,28 +1,25 @@
 package org.papercloud.de.pdfservice.search;
 
-import java.io.IOException;
-import java.nio.file.AccessDeniedException;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.stream.IntStream;
-
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.common.dto.document.DocumentDTO;
 import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.common.dto.document.DocumentMapper;
 import org.papercloud.de.common.dto.document.DocumentUploadDTO;
-import org.papercloud.de.common.events.DocumentUploadedEvent;
+import org.papercloud.de.common.events.OcrEvent;
+import org.papercloud.de.common.util.PdfTextExtractorService;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
-import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfdatabase.repository.PageRepository;
 import org.papercloud.de.pdfdatabase.repository.UserRepository;
-import org.papercloud.de.pdfservice.textutils.PdfTextExtractorService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.io.IOException;
+import java.nio.file.AccessDeniedException;
+import java.time.LocalDateTime;
+import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -37,22 +34,28 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public DocumentDTO processDocument(DocumentUploadDTO uploadDTO, String username) throws IOException {
-        UserEntity user = findUserOrThrow(username);
-        DocumentPdfEntity document = createDocument(user, uploadDTO);
-        List<String> pageTexts = pdfTextExtractorService.extractTextFromPdf(uploadDTO.getInputPdfBytes());
-        DocumentDTO documentDTO = persistDocument(document, pageTexts);
-
-        publisher.publishEvent(new DocumentUploadedEvent(documentDTO.getId(), pageTexts));
-
+        DocumentDTO documentDTO = saveDocToDB(username, uploadDTO);
+        publisher.publishEvent(new OcrEvent(documentDTO.getId(),documentDTO.getPdfContent()));
         return documentDTO;
     }
 
-    @Transactional
-    public DocumentDTO persistDocument(DocumentPdfEntity doc, List<String> pages) {
-        DocumentPdfEntity saved = documentRepository.save(doc);
-        savePages(saved, pages);
 
-        return documentMapper.toDocumentDTO(saved);
+    @Transactional
+    private DocumentDTO saveDocToDB(String username, DocumentUploadDTO uploadDTO) {
+        UserEntity user = findUserOrThrow(username);
+
+        DocumentPdfEntity documentPdfEntity = DocumentPdfEntity.builder()
+                .filename(uploadDTO.getFileName())
+                .contentType(uploadDTO.getContentType())
+                .pdfContent(uploadDTO.getInputPdfBytes())
+                .size(uploadDTO.getSize())
+                .owner(user)
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        documentRepository.save(documentPdfEntity);
+        return documentMapper.toDocumentDTO(documentPdfEntity);
+
     }
 
     @Override
@@ -71,29 +74,6 @@ public class DocumentServiceImpl implements DocumentService {
     private UserEntity findUserOrThrow(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
-    }
-
-    private DocumentPdfEntity createDocument(UserEntity user, DocumentUploadDTO uploadDTO) {
-        return DocumentPdfEntity.builder()
-                .filename(uploadDTO.getFileName())
-                .contentType(uploadDTO.getContentType())
-                .pdfContent(uploadDTO.getInputPdfBytes())
-                .size(uploadDTO.getSize())
-                .owner(user)
-                .uploadedAt(LocalDateTime.now())
-                .build();
-    }
-
-    private void savePages(DocumentPdfEntity document, List<String> pageTexts) {
-        List<PagesPdfEntity> pages = IntStream.range(0, pageTexts.size())
-                .mapToObj(i -> PagesPdfEntity.builder()
-                        .document(document)
-                        .pageNumber(i + 1)
-                        .pageText(pageTexts.get(i))
-                        .build())
-                .toList();
-
-        pageRepository.saveAll(pages);
     }
 
     private DocumentPdfEntity getDocumentOrThrow(Long id) {
