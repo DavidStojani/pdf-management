@@ -1,19 +1,12 @@
 package org.papercloud.de.pdfdatabase.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.papercloud.de.pdfdatabase.config.EncryptedStringConverter;
 
 @Entity
 @Table(name = "document_pages", indexes = {
@@ -34,6 +27,7 @@ public class PagesPdfEntity {
   private int pageNumber;
 
   @Column(name = "page_text", columnDefinition = "TEXT")
+  @Convert(converter = EncryptedStringConverter.class)
   private String pageText; // Extracted text for searching
 
   @ManyToOne

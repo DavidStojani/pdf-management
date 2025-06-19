@@ -13,8 +13,38 @@ __ App scans for new files in the given folders__
 
 
 
-  -- There should be a way to not iterate strategies. also here after a strategy returns text than we need to clean it. Q: when else will the text be cleaned ?
-
+  -- There should be a way to not iterate strategies. also here after a strategy returns text than we need to clean it.
+  Q: when else will the text be cleaned ?
 1-  I clean the text that i read from ocr
 2-  I clean the text that i get as response from ollama
 3-  I clean the processed response of ollama to get just one json
+
+
+-----------------------SEARCH OPTIONS----------------------------
+1. 🔍 Text-based Full-Text Search
+
+        Search in whole document text and title.
+
+Tech options:
+
+    PostgreSQL full-text search (tsvector, to_tsvector, GIN indexes).
+
+    Add Elasticsearch (best for large-scale and flexible text queries).
+
+    Leverage vector embeddings if you go semantic (see below).
++++AND+++ ////OR////
+2. 🏷️ Tag-Based Filtering (with AND/OR logic)
+
+    Users can select multiple tags (e.g., Invoice, Contract, Health).
+
+    Combine with operators:
+
+        Invoice AND 2023
+
+        Contract OR Policy
+
+3. 📅 Date Range Search
+    Allow filtering by:
+        -Upload date
+        -Document creation date (if extracted)
+        -Last modified / processed

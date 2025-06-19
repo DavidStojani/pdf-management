@@ -2,6 +2,7 @@ package org.papercloud.de.pdfdatabase.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.papercloud.de.pdfdatabase.config.EncryptedByteArrayConverter;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +30,7 @@ public class DocumentPdfEntity {
 
   @Lob
   @Column(name = "pdf_content")
+  @Convert(converter = EncryptedByteArrayConverter.class)
   private byte[] pdfContent;
 
   private LocalDateTime uploadedAt;
