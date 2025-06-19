@@ -1,0 +1,5 @@
+package org.papercloud.de.pdfdatabase.repository;
+
+public class DocumentPdRepository JpaRepository<DocumentPdfEntity, Long> {
+
+}
