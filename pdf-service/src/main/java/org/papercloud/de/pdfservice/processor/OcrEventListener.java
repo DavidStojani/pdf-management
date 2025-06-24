@@ -8,8 +8,10 @@ import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfdatabase.repository.PageRepository;
-import org.springframework.context.event.EventListener;
+import org.papercloud.de.pdfservice.errors.DocumentNotFoundException;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -27,12 +29,13 @@ public class OcrEventListener {
     private final PageRepository pageRepository;
 
     @EventListener
+    @Async
     public void handleOcrEvent(OcrEvent event) {
         Long docId = event.getDocumentId();
         log.info("Received OCR event for document ID: {}", docId);
 
         DocumentPdfEntity document = documentRepository.findById(docId)
-                .orElseThrow(() -> new IllegalStateException("Document not found for ID: " + docId));
+                .orElseThrow(() -> new DocumentNotFoundException("Document not found for ID: " + docId));
 
         try {
             List<String> pageTexts = ocrProcessor.extractTextFromPdf(event.getPdfBytes());

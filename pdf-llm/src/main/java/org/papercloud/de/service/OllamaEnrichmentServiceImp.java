@@ -23,7 +23,7 @@ public class OllamaEnrichmentServiceImp implements DocumentEnrichmentService {
     @Override
     public Mono<EnrichmentResultDTO> enrichTextAsync(String plainText) {
         String prompt = buildPrompt(plainText);
-        System.out.printf("PROMPT:: %s ", prompt);
+        System.out.printf("PROMPT__::__ %s ", prompt);
 
         return sendPromptToModelAsync(prompt)
                 .filter(responseBody -> responseBody != null && !responseBody.isBlank())
@@ -37,13 +37,13 @@ public class OllamaEnrichmentServiceImp implements DocumentEnrichmentService {
     }
 
     private String buildPrompt(String plainText) {
-        return "Give me a json-format with title, date_sent and 5 tags for this text: \"" + plainText + "\"";
+        return "Give me a json-format with title, date_sent as dd.MM.yyyy and 5 tags for this text: \"" + plainText + "\"";
     }
 
     public Mono<String> sendPromptToModelAsync(String prompt) {
         return webClient.post()
                 .uri("/api/generate")
-                .bodyValue(Map.of("model", "llama3", "prompt", prompt))
+                .bodyValue(Map.of("model", "mistral", "prompt", prompt))
                 .retrieve()
                 .bodyToMono(String.class)
                 .timeout(Duration.ofMinutes(10))

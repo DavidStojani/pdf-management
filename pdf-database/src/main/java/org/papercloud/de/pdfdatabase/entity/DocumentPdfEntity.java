@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.papercloud.de.pdfdatabase.config.EncryptedByteArrayConverter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -44,7 +45,7 @@ public class DocumentPdfEntity {
 
   private List<String> tags; //TODO : do this better
 
-  private String dateOnDocument;
+  private LocalDate dateOnDocument;
 
   private boolean failedEnrichment = false;
 }
