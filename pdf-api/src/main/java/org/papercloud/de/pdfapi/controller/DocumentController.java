@@ -65,8 +65,7 @@ public class DocumentController {
     @Operation(summary = "Download a PDF document")
     @GetMapping("/{id}/download")
     public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id) throws AccessDeniedException {
-        String username = getCurrentUsername();
-        DocumentDownloadDTO document = documentService.downloadDocument(username, id);
+        DocumentDownloadDTO document = documentService.downloadDocument(getCurrentUsername(), id);
 
         if (document == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();

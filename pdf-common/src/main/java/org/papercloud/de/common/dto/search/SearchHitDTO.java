@@ -11,5 +11,4 @@ public class SearchHitDTO {
   private String documentName;
   private int pageNumber;
   private String textSnippet;
-
 }
