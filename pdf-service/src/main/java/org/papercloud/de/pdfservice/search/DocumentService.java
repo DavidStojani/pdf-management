@@ -7,8 +7,12 @@ import java.nio.file.AccessDeniedException;
 import org.papercloud.de.common.dto.document.DocumentDTO;
 import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.common.dto.document.DocumentUploadDTO;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface DocumentService {
+
+  DocumentDTO processUpload(MultipartFile file, Authentication authentication);
 
   DocumentDTO processDocument(DocumentUploadDTO file, String username) throws IOException;
 
