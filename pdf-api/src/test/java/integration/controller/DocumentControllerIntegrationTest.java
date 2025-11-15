@@ -9,14 +9,17 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.papercloud.de.common.dto.document.DocumentDTO;
 import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
-import org.papercloud.de.common.dto.document.DocumentUploadDTO;
 import org.papercloud.de.pdfservice.search.DocumentService;
 import org.papercloud.de.pdfservice.textutils.FolderScannerService;
+import org.papercloud.de.pdfservice.errors.DocumentUploadException;
+import org.papercloud.de.pdfservice.errors.InvalidDocumentException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -24,7 +27,6 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -57,7 +59,7 @@ class DocumentControllerIntegrationTest extends BaseIntegrationTest {
             MockMultipartFile file = DocumentTestDataBuilder.createValidPdfFile();
             DocumentDTO mockResponse = createMockDocumentDTO();
 
-            when(documentService.processDocument(any(DocumentUploadDTO.class), eq("testuser")))
+            when(documentService.processUpload(any(MultipartFile.class), any(Authentication.class)))
                     .thenReturn(mockResponse);
 
             // When & Then
@@ -68,7 +70,7 @@ class DocumentControllerIntegrationTest extends BaseIntegrationTest {
                     .andExpect(jsonPath("$.message").value("Document uploaded successfully"))
                     .andExpect(jsonPath("$.documentId").value("1"));
 
-            verify(documentService).processDocument(any(DocumentUploadDTO.class), eq("testuser"));
+            verify(documentService).processUpload(any(MultipartFile.class), any(Authentication.class));
         }
 
         @Test
@@ -78,14 +80,15 @@ class DocumentControllerIntegrationTest extends BaseIntegrationTest {
             // Given
             MockMultipartFile file = DocumentTestDataBuilder.createInvalidFile();
 
+            when(documentService.processUpload(any(MultipartFile.class), any(Authentication.class)))
+                    .thenThrow(new InvalidDocumentException("Invalid file format. Only PDF files are allowed."));
+
             // When & Then
             mockMvc.perform(multipart("/api/documents/upload")
                             .file(file)
                             .with(csrf()))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error").value("Invalid file format. Only PDF files are allowed."));
-
-            verifyNoInteractions(documentService);
         }
 
         @Test
@@ -95,14 +98,15 @@ class DocumentControllerIntegrationTest extends BaseIntegrationTest {
             // Given
             MockMultipartFile file = DocumentTestDataBuilder.createEmptyFile();
 
+            when(documentService.processUpload(any(MultipartFile.class), any(Authentication.class)))
+                    .thenThrow(new InvalidDocumentException("Uploaded file must not be empty."));
+
             // When & Then
             mockMvc.perform(multipart("/api/documents/upload")
                             .file(file)
                             .with(csrf()))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.error").value("Invalid file format. Only PDF files are allowed."));
-
-            verifyNoInteractions(documentService);
+                    .andExpect(jsonPath("$.error").value("Uploaded file must not be empty."));
         }
 
         @Test
@@ -112,15 +116,15 @@ class DocumentControllerIntegrationTest extends BaseIntegrationTest {
             // Given
             MockMultipartFile file = DocumentTestDataBuilder.createValidPdfFile();
 
-            when(documentService.processDocument(any(DocumentUploadDTO.class), eq("testuser")))
-                    .thenThrow(new RuntimeException("Database connection failed"));
+            when(documentService.processUpload(any(MultipartFile.class), any(Authentication.class)))
+                    .thenThrow(new DocumentUploadException("Database connection failed"));
 
             // When & Then
             mockMvc.perform(multipart("/api/documents/upload")
                             .file(file)
                             .with(csrf()))
                     .andExpect(status().isInternalServerError())
-                    .andExpect(jsonPath("$.error").value("Error uploading file: Database connection failed"));
+                    .andExpect(jsonPath("$.error").value("Database connection failed"));
         }
     }
 

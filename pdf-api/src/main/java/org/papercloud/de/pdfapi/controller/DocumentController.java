@@ -3,14 +3,12 @@ package org.papercloud.de.pdfapi.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.common.dto.document.DocumentDTO;
 import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
-import org.papercloud.de.common.dto.document.DocumentUploadDTO;
 import org.papercloud.de.common.dto.document.FolderPathDTO;
 import org.papercloud.de.pdfservice.search.DocumentService;
 import org.papercloud.de.pdfservice.textutils.FolderScannerService;
@@ -21,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,30 +35,13 @@ public class DocumentController {
 
     @Operation(summary = "Upload a PDF document")
     @PostMapping("/upload")
-    public ResponseEntity<Map<String, String>> uploadPdf(@RequestParam("file") MultipartFile file) {
-        if (!isValidPdf(file)) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid file format. Only PDF files are allowed."));
-        }
+    public ResponseEntity<Map<String, String>> uploadPdf(@RequestParam("file") MultipartFile file, Authentication authentication) {
+        DocumentDTO savedDocument = documentService.processUpload(file, authentication);
 
-        try {
-            DocumentUploadDTO documentUploadDTO = DocumentUploadDTO.builder()
-                    .fileName(file.getOriginalFilename())
-                    .contentType(file.getContentType())
-                    .size(file.getSize())
-                    .inputPdfBytes(file.getBytes())
-                    .build();
-
-            DocumentDTO savedDocument = documentService.processDocument(documentUploadDTO, getCurrentUsername());
-
-            return ResponseEntity.ok(Map.of(
-                    "message", "Document uploaded successfully",
-                    "documentId", savedDocument.getId().toString()
-            ));
-        } catch (Exception e) {
-            logger.error("Unexpected error during file upload", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error uploading file: " + e.getMessage()));
-        }
+        return ResponseEntity.ok(Map.of(
+                "message", "Document uploaded successfully",
+                "documentId", savedDocument.getId().toString()
+        ));
     }
 
     @Operation(summary = "Download a PDF document")
@@ -95,10 +77,6 @@ public class DocumentController {
 
 
     // ========== Private Helpers ==========
-
-    private boolean isValidPdf(MultipartFile file) {
-        return !file.isEmpty() && "application/pdf".equalsIgnoreCase(file.getContentType());
-    }
 
     private String getCurrentUsername() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
