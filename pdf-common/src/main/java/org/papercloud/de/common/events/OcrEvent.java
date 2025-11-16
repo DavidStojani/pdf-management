@@ -1,11 +1,12 @@
 package org.papercloud.de.common.events;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import java.util.Arrays;
 
-@AllArgsConstructor
-@Getter
-public class OcrEvent {
-    private Long documentId;
-    private byte[] pdfBytes;
+public record OcrEvent(Long documentId, byte[] pdfBytes) {
+    public OcrEvent {
+        if (documentId == null) {
+            throw new IllegalArgumentException("documentId must not be null");
+        }
+        pdfBytes = pdfBytes == null ? new byte[0] : Arrays.copyOf(pdfBytes, pdfBytes.length);
+    }
 }
