@@ -18,6 +18,8 @@ public class EnrichmentResultDTO {
 
     private List<TagDTO> tags;
 
+    private boolean flagFailedEnrichment;
+
     public List<String> getTagNames() {
         if (tags == null) {
             return List.of();

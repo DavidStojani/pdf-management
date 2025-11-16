@@ -24,8 +24,9 @@ public class WebClientConfig {
                         .addHandlerLast(new WriteTimeoutHandler(600, TimeUnit.SECONDS))
                 );
 
+        //ToDo: hier andere Lösung als localhost
         return WebClient.builder()
-                .baseUrl("http://172.17.0.1:11434")
+                .baseUrl("http://localhost:11434")
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();
     }

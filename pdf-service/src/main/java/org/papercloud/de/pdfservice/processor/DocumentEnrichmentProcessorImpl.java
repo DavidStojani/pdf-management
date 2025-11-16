@@ -9,20 +9,17 @@ import org.papercloud.de.common.util.DocumentEnrichmentService;
 import org.papercloud.de.common.util.OcrTextCleaningService;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
-import org.papercloud.de.pdfservice.errors.DocumentEnrichmentException;
 import org.papercloud.de.pdfservice.errors.DocumentNotFoundException;
 import org.papercloud.de.pdfservice.errors.InvalidDocumentException;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.retry.annotation.Recover;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -36,7 +33,6 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     @Override
-    @Retryable
     public EnrichmentResultDTO enrichDocument(EnrichmentEvent event) {
         log.info("Starting document enrichment process for document ID: {}", event.getDocumentId());
 
@@ -53,14 +49,6 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
         return enrichmentResult;
     }
 
-    @Recover
-    public void recover(Exception exception, EnrichmentEvent event) {
-        log.error("Document enrichment failed for document ID: {}. Marking as failed.",
-                event.getDocumentId(), exception);
-
-        markDocumentAsFailedEnrichment(event.getDocumentId());
-    }
-
     private DocumentPdfEntity getDocumentById(Long documentId) {
         return documentRepository.findById(documentId)
                 .orElseThrow(() -> new DocumentNotFoundException("Document not found with ID: " + documentId));
@@ -73,28 +61,48 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
     }
 
     private String cleanFirstPageText(List<String> pageTexts) {
+        // validatePageTexts already ensures index 0 exists
         return ocrTextCleaningService.cleanOcrText(pageTexts.get(0));
     }
 
     private EnrichmentResultDTO performEnrichment(String cleanedText) {
+        long startTime = System.nanoTime();
+
         try {
-            long startTime = System.nanoTime();
+            EnrichmentResultDTO result = documentEnrichmentService.enrichTextAsync(cleanedText)
+                    // Defensive safety net in case the service ever starts throwing again
+                    .onErrorReturn(ex -> {
+                        log.error("Error in enrichTextAsync (inside performEnrichment), returning fallback.", ex);
+                        return true;
+                    }, getFallbackResult())
+                    .toFuture()
+                    .get();
 
-            CompletableFuture<EnrichmentResultDTO> enrichmentFuture =
-                    documentEnrichmentService.enrichTextAsync(cleanedText).toFuture();
+            if (result == null) {
+                log.warn("Enrichment returned null. Using fallback result.");
+                return getFallbackResult();
+            }
 
-            EnrichmentResultDTO result = enrichmentFuture.get();
-
-            logEnrichmentDuration(startTime);
             return result;
-
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new DocumentEnrichmentException("Document enrichment was interrupted", e);
+            log.error("Enrichment was interrupted. Returning fallback.", e);
+            return getFallbackResult();
         } catch (ExecutionException e) {
-            Throwable cause = e.getCause();
-            throw new DocumentEnrichmentException("Failed to enrich document: " + cause.getMessage(), cause);
+            log.error("Enrichment failed with ExecutionException. Returning fallback.", e);
+            return getFallbackResult();
+        } finally {
+            logEnrichmentDuration(startTime);
         }
+    }
+
+    private EnrichmentResultDTO getFallbackResult() {
+        return EnrichmentResultDTO.builder()
+                .title("Unknown Title")
+                .date_sent("01.01.2000")
+                .tags(List.of())
+                .flagFailedEnrichment(true)
+                .build();
     }
 
     private void logEnrichmentDuration(long startTime) {
@@ -107,6 +115,7 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
         document.setTitle(enrichmentResult.getTitle());
         document.setDateOnDocument(parseDocumentDate(enrichmentResult.getDate_sent()));
         document.setTags(enrichmentResult.getTagNames());
+        document.setFailedEnrichment(enrichmentResult.isFlagFailedEnrichment());
 
         documentRepository.save(document);
         log.debug("Document updated and saved with ID: {}", document.getId());
@@ -124,16 +133,5 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
     private void publishIndexEvent(Long documentId) {
         eventPublisher.publishEvent(new IndexDocumentEvent(documentId));
         log.debug("Published IndexDocumentEvent for document ID: {}", documentId);
-    }
-
-    private void markDocumentAsFailedEnrichment(Long documentId) {
-        try {
-            DocumentPdfEntity document = getDocumentById(documentId);
-            document.setFailedEnrichment(true);
-            documentRepository.save(document);
-            log.info("Marked document ID: {} as failed enrichment", documentId);
-        } catch (Exception e) {
-            log.error("Failed to mark document as failed enrichment for ID: {}", documentId, e);
-        }
     }
 }
