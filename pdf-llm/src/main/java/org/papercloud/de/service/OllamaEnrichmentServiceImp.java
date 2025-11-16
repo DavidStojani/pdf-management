@@ -10,6 +10,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -35,11 +36,11 @@ public class OllamaEnrichmentServiceImp implements DocumentEnrichmentService {
                 .filter(responseBody -> responseBody != null && !responseBody.isBlank())
                 .flatMap(this::mapResponseToEnrichmentResult)
                 // no Body (404 etc.) → fallback
-                .switchIfEmpty(Mono.empty())
+                .switchIfEmpty(Mono.just(getFallbackResult()))
                 // absolutely any unexpected error → fallback
                 .onErrorResume(ex -> {
                     log.error("Error while enriching text via Ollama. Returning fallback result.", ex);
-                    return Mono.empty();
+                    return Mono.just(getFallbackResult());
                 });
     }
 
@@ -67,6 +68,15 @@ public class OllamaEnrichmentServiceImp implements DocumentEnrichmentService {
                     log.error("Failed to call Ollama model", e);
                     return Mono.empty();
                 });
+    }
+
+    private EnrichmentResultDTO getFallbackResult() {
+        return EnrichmentResultDTO.builder()
+                .title("Unknown Title")
+                .date_sent("01.01.2000")
+                .tags(List.of())
+                .flagFailedEnrichment(true)
+                .build();
     }
 
     private String buildPrompt(String plainText) {
