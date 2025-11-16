@@ -11,8 +11,7 @@ import org.papercloud.de.common.dto.search.IndexableDocumentDTO;
 import org.papercloud.de.common.dto.search.SearchHitDTO;
 import org.papercloud.de.common.dto.search.SearchRequestDTO;
 import org.papercloud.de.common.dto.search.SearchResultDTO;
-import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
-import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
+import org.papercloud.de.common.events.payload.IndexDocumentPayload;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -30,30 +29,18 @@ public class ElasticsearchServiceImpl implements ElasticsearchService {
     private static final String INDEX_NAME = "documents";
 
     @Override
-    public void indexDocument(DocumentPdfEntity document, List<PagesPdfEntity> pages) {
-        String combinedText = pages.stream()
-                .map(PagesPdfEntity::getPageText)
-                .filter(Objects::nonNull)
-                .collect(Collectors.joining("\n"));
-
-        IndexableDocumentDTO dto = IndexableDocumentDTO.builder()
-                .id(document.getId())
-                .fileName(document.getTitle())
-                .contentType(document.getContentType())
-                .tags(document.getTags()) // or transform tagEntities to List<String>
-                .year(document.getDateOnDocument().getYear())
-                .fullText(combinedText)
-                .build();
+    public void indexDocument(IndexDocumentPayload payload) {
+        IndexableDocumentDTO dto = payload.toDto();
 
         try {
             elasticsearchClient.index(i -> i
                     .index(INDEX_NAME)
-                    .id(String.valueOf(document.getId()))
+                    .id(String.valueOf(payload.id()))
                     .document(dto)
             );
-            log.info("Indexed document ID {} into Elasticsearch", document.getId());
+            log.info("Indexed document ID {} into Elasticsearch", payload.id());
         } catch (IOException e) {
-            log.error("Failed to index document {}", document.getId(), e);
+            log.error("Failed to index document {}", payload.id(), e);
         }
     }
     @Override

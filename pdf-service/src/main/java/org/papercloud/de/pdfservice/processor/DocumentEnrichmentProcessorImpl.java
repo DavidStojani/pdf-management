@@ -5,20 +5,24 @@ import lombok.extern.slf4j.Slf4j;
 import org.papercloud.de.common.dto.llm.EnrichmentResultDTO;
 import org.papercloud.de.common.events.EnrichmentEvent;
 import org.papercloud.de.common.events.IndexDocumentEvent;
+import org.papercloud.de.common.events.payload.IndexDocumentPayload;
 import org.papercloud.de.common.util.DocumentEnrichmentService;
 import org.papercloud.de.common.util.OcrTextCleaningService;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
+import org.papercloud.de.pdfservice.errors.DocumentEnrichmentException;
 import org.papercloud.de.pdfservice.errors.DocumentNotFoundException;
 import org.papercloud.de.pdfservice.errors.InvalidDocumentException;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 @Service
 @RequiredArgsConstructor
@@ -29,24 +33,28 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
     private final OcrTextCleaningService ocrTextCleaningService;
     private final DocumentRepository documentRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final TransactionTemplate transactionTemplate;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     @Override
-    public EnrichmentResultDTO enrichDocument(EnrichmentEvent event) {
-        log.info("Starting document enrichment process for document ID: {}", event.getDocumentId());
+    public Mono<EnrichmentResultDTO> enrichDocument(EnrichmentEvent event) {
+        log.info("Starting document enrichment process for document ID: {}", event.documentId());
 
-        DocumentPdfEntity document = getDocumentById(event.getDocumentId());
-        validatePageTexts(event.getPageTexts());
+        validatePageTexts(event.pageTexts());
 
-        String cleanedText = cleanFirstPageText(event.getPageTexts());
-        EnrichmentResultDTO enrichmentResult = performEnrichment(cleanedText);
+        String cleanedText = cleanFirstPageText(event.pageTexts());
+        long startTime = System.nanoTime();
 
-        updateDocumentWithEnrichmentResult(document, enrichmentResult);
-        publishIndexEvent(document.getId());
-
-        log.info("Successfully completed enrichment for document ID: {}", document.getId());
-        return enrichmentResult;
+        return documentEnrichmentService.enrichTextAsync(cleanedText)
+                .switchIfEmpty(Mono.just(getFallbackResult()))
+                .onErrorMap(ex -> new DocumentEnrichmentException("Enrichment failed", ex))
+                .map(result -> result == null ? getFallbackResult() : result)
+                .map(result -> persistAndPublish(event, result))
+                .doOnSuccess(result -> log.info("Successfully completed enrichment for document ID: {}", event.documentId()))
+                .doOnError(ex -> log.error("Enrichment failed for document {}", event.documentId(), ex))
+                .doFinally(signalType -> logEnrichmentDuration(startTime))
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     private DocumentPdfEntity getDocumentById(Long documentId) {
@@ -63,37 +71,6 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
     private String cleanFirstPageText(List<String> pageTexts) {
         // validatePageTexts already ensures index 0 exists
         return ocrTextCleaningService.cleanOcrText(pageTexts.get(0));
-    }
-
-    private EnrichmentResultDTO performEnrichment(String cleanedText) {
-        long startTime = System.nanoTime();
-
-        try {
-            EnrichmentResultDTO result = documentEnrichmentService.enrichTextAsync(cleanedText)
-                    // Defensive safety net in case the service ever starts throwing again
-                    .onErrorReturn(ex -> {
-                        log.error("Error in enrichTextAsync (inside performEnrichment), returning fallback.", ex);
-                        return true;
-                    }, getFallbackResult())
-                    .toFuture()
-                    .get();
-
-            if (result == null) {
-                log.warn("Enrichment returned null. Using fallback result.");
-                return getFallbackResult();
-            }
-
-            return result;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.error("Enrichment was interrupted. Returning fallback.", e);
-            return getFallbackResult();
-        } catch (ExecutionException e) {
-            log.error("Enrichment failed with ExecutionException. Returning fallback.", e);
-            return getFallbackResult();
-        } finally {
-            logEnrichmentDuration(startTime);
-        }
     }
 
     private EnrichmentResultDTO getFallbackResult() {
@@ -130,8 +107,28 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
         }
     }
 
-    private void publishIndexEvent(Long documentId) {
-        eventPublisher.publishEvent(new IndexDocumentEvent(documentId));
-        log.debug("Published IndexDocumentEvent for document ID: {}", documentId);
+    private EnrichmentResultDTO persistAndPublish(EnrichmentEvent event, EnrichmentResultDTO enrichmentResult) {
+        EnrichmentResultDTO persisted = transactionTemplate.execute(status -> {
+            DocumentPdfEntity document = getDocumentById(event.documentId());
+            updateDocumentWithEnrichmentResult(document, enrichmentResult);
+            publishIndexEvent(document, event.pageTexts());
+            return enrichmentResult;
+        });
+
+        return persisted == null ? enrichmentResult : persisted;
+    }
+
+    private void publishIndexEvent(DocumentPdfEntity document, List<String> pageTexts) {
+        IndexDocumentPayload payload = new IndexDocumentPayload(
+                document.getId(),
+                document.getTitle(),
+                document.getContentType(),
+                document.getTags(),
+                document.getDateOnDocument() != null ? document.getDateOnDocument().getYear() : LocalDate.now().getYear(),
+                String.join("\n", pageTexts)
+        );
+
+        eventPublisher.publishEvent(new IndexDocumentEvent(payload));
+        log.debug("Published IndexDocumentEvent for document ID: {}", document.getId());
     }
 }

@@ -1,6 +1,5 @@
 package org.papercloud.de.pdfservice.processor;
 
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,17 +23,18 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
@@ -77,11 +77,11 @@ class DocumentEnrichmentProcessorImplIntegrationTest {
         EnrichmentResultDTO expectedResult = createEnrichmentResult();
 
         when(ocrTextCleaningService.cleanOcrText("test content")).thenReturn("cleaned content");
-        when(documentEnrichmentService.enrichTextAsync("cleaned content").toFuture())
-                .thenReturn(CompletableFuture.completedFuture(expectedResult));
+        when(documentEnrichmentService.enrichTextAsync("cleaned content"))
+                .thenReturn(Mono.just(expectedResult));
 
         // When
-        EnrichmentResultDTO result = processor.enrichDocument(event);
+        EnrichmentResultDTO result = processor.enrichDocument(event).block();
 
         // Then
         assertThat(result).isEqualTo(expectedResult);
@@ -104,15 +104,16 @@ class DocumentEnrichmentProcessorImplIntegrationTest {
         EnrichmentEvent event = new EnrichmentEvent(testDocument.getId(), List.of("test content"));
 
         when(ocrTextCleaningService.cleanOcrText("test content")).thenReturn("cleaned content");
-        when(documentEnrichmentService.enrichTextAsync("cleaned content").toFuture())
-                .thenReturn(CompletableFuture.failedFuture(new RuntimeException("Enrichment service failed")));
+        when(documentEnrichmentService.enrichTextAsync("cleaned content"))
+                .thenReturn(Mono.error(new RuntimeException("Enrichment service failed")));
 
         String originalTitle = testDocument.getTitle();
         LocalDate originalDate = testDocument.getDateOnDocument();
 
         // When & Then
-        assertThatThrownBy(() -> processor.enrichDocument(event))
-                .isInstanceOf(DocumentEnrichmentException.class);
+        StepVerifier.create(processor.enrichDocument(event))
+                .expectError(DocumentEnrichmentException.class)
+                .verify();
 
         // Verify database state remains unchanged
         entityManager.flush();
@@ -151,8 +152,8 @@ class DocumentEnrichmentProcessorImplIntegrationTest {
         EnrichmentResultDTO expectedResult = createEnrichmentResult();
 
         when(ocrTextCleaningService.cleanOcrText("test content")).thenReturn("cleaned content");
-        when(documentEnrichmentService.enrichTextAsync("cleaned content").toFuture())
-                .thenReturn(CompletableFuture.completedFuture(expectedResult));
+        when(documentEnrichmentService.enrichTextAsync("cleaned content"))
+                .thenReturn(Mono.just(expectedResult));
 
         CountDownLatch latch = new CountDownLatch(2);
         List<Exception> exceptions = Collections.synchronizedList(new ArrayList<>());
@@ -160,7 +161,7 @@ class DocumentEnrichmentProcessorImplIntegrationTest {
         // When - Simulate concurrent enrichment
         Thread thread1 = new Thread(() -> {
             try {
-                processor.enrichDocument(event);
+                processor.enrichDocument(event).block();
             } catch (Exception e) {
                 exceptions.add(e);
             } finally {
@@ -170,7 +171,7 @@ class DocumentEnrichmentProcessorImplIntegrationTest {
 
         Thread thread2 = new Thread(() -> {
             try {
-                processor.enrichDocument(event);
+                processor.enrichDocument(event).block();
             } catch (Exception e) {
                 exceptions.add(e);
             } finally {
@@ -197,9 +198,12 @@ class DocumentEnrichmentProcessorImplIntegrationTest {
         EnrichmentEvent event = new EnrichmentEvent(nonExistentId, List.of("test content"));
 
         // When & Then
-        assertThatThrownBy(() -> processor.enrichDocument(event))
-                .isInstanceOf(DocumentNotFoundException.class)
-                .hasMessageContaining("Document not found with ID: 999");
+        StepVerifier.create(processor.enrichDocument(event))
+                .expectErrorSatisfies(error -> {
+                    assertThat(error).isInstanceOf(DocumentNotFoundException.class);
+                    assertThat(error).hasMessageContaining("Document not found with ID: 999");
+                })
+                .verify();
     }
 
     private DocumentPdfEntity createAndPersistTestDocument() {
@@ -264,17 +268,17 @@ class DocumentEnrichmentProcessorEventIntegrationTest {
         EnrichmentResultDTO expectedResult = createEnrichmentResult();
 
         when(ocrTextCleaningService.cleanOcrText("test content")).thenReturn("cleaned content");
-        when(documentEnrichmentService.enrichTextAsync("cleaned content").toFuture())
-                .thenReturn(CompletableFuture.completedFuture(expectedResult));
+        when(documentEnrichmentService.enrichTextAsync("cleaned content"))
+                .thenReturn(Mono.just(expectedResult));
 
         // When
-        processor.enrichDocument(event);
+        processor.enrichDocument(event).block();
 
         // Then - Wait for async event processing
         await().atMost(2, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
                     assertThat(receivedEvents).hasSize(1);
-                    assertThat(receivedEvents.get(0).getDocumentId()).isEqualTo(document.getId());
+                    assertThat(receivedEvents.get(0).payload().id()).isEqualTo(document.getId());
                 });
     }
 

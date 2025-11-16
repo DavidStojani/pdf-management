@@ -1,10 +1,11 @@
 package org.papercloud.de.common.events;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import org.papercloud.de.common.events.payload.IndexDocumentPayload;
 
-@RequiredArgsConstructor
-@Getter
-public class IndexDocumentEvent {
-    private final Long documentId;
+public record IndexDocumentEvent(IndexDocumentPayload payload) {
+    public IndexDocumentEvent {
+        if (payload == null) {
+            throw new IllegalArgumentException("payload must not be null");
+        }
+    }
 }

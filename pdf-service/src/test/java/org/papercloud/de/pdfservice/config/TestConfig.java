@@ -20,6 +20,7 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
 
@@ -64,9 +65,10 @@ public class TestConfig {
             DocumentEnrichmentService enrichmentService,
             OcrTextCleaningService cleaningService,
             ApplicationEventPublisher eventPublisher,
-            DocumentRepository documentRepository
+            DocumentRepository documentRepository,
+            TransactionTemplate transactionTemplate
             // Add other dependencies as needed
     ) {
-        return new DocumentEnrichmentProcessorImpl(enrichmentService, cleaningService,documentRepository, eventPublisher);
+        return new DocumentEnrichmentProcessorImpl(enrichmentService, cleaningService,documentRepository, eventPublisher, transactionTemplate);
     }
 }

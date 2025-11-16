@@ -1,14 +1,10 @@
 package org.papercloud.de.pdfsearch.service;
 
-import org.papercloud.de.common.dto.search.IndexableDocumentDTO;
 import org.papercloud.de.common.dto.search.SearchRequestDTO;
 import org.papercloud.de.common.dto.search.SearchResultDTO;
-import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
-import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
-
-import java.util.List;
+import org.papercloud.de.common.events.payload.IndexDocumentPayload;
 
 public interface ElasticsearchService {
-    void indexDocument(DocumentPdfEntity document, List<PagesPdfEntity> pages);
+    void indexDocument(IndexDocumentPayload payload);
     SearchResultDTO search(SearchRequestDTO searchRequestDTO);
 }
