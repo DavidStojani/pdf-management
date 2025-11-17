@@ -65,6 +65,7 @@ class DocumentEnrichmentProcessorPersistenceTest {
                 .title("Updated Title")
                 .date_sent("02.02.2024")
                 .tags(List.of(new EnrichmentResultDTO.TagDTO("finance"), new EnrichmentResultDTO.TagDTO("urgent")))
+                .flagFailedEnrichment(true)
                 .build();
 
         when(ocrTextCleaningService.cleanOcrText("page text")).thenReturn("page text");

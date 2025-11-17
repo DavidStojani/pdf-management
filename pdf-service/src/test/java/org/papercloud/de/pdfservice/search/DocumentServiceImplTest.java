@@ -18,6 +18,7 @@ import org.papercloud.de.common.dto.document.DocumentMapper;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
+import org.papercloud.de.pdfservice.errors.DocumentNotFoundException;
 import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,13 +65,13 @@ class DocumentServiceImplTest {
 
   // Not found
   @Test
-  void downloadDocument_whenDocumentNotFound_shouldThrowNoSuchElementException() {
+  void downloadDocument_whenDocumentNotFound_shouldThrowDocumentNotFoundException() {
     // Given
     Long documentId = 1L;
     when(documentRepository.findById(documentId)).thenReturn(Optional.empty());
 
     // When / Then
-    assertThrows(ResponseStatusException.class, () ->
+    assertThrows(DocumentNotFoundException.class, () ->
             documentService.downloadDocument("anyuser", documentId)
     );
   }
