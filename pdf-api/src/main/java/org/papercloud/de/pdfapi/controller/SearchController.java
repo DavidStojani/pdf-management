@@ -1,10 +1,10 @@
 package org.papercloud.de.pdfapi.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.papercloud.de.common.dto.search.IndexableDocumentDTO;
-import org.papercloud.de.common.dto.search.SearchRequestDTO;
-import org.papercloud.de.common.dto.search.SearchResultDTO;
-import org.papercloud.de.pdfsearch.service.ElasticsearchService;
+import org.papercloud.de.core.dto.search.IndexableDocumentDTO;
+import org.papercloud.de.core.dto.search.SearchRequestDTO;
+import org.papercloud.de.core.dto.search.SearchResultDTO;
+import org.papercloud.de.core.ports.outbound.SearchService;
 import org.papercloud.de.pdfservice.search.DocumentSearchSimpleImpl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,15 +17,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SearchController {
 
-  private final DocumentSearchSimpleImpl searchService;
+  //private final DocumentSearchSimpleImpl searchService;
 
-  private final ElasticsearchService elasticsearchService;
+  private final SearchService searchService;
 
   @PostMapping
   public ResponseEntity<SearchResultDTO> search(@RequestBody SearchRequestDTO request) {
     request.setUsername(getCurrentUsername());
 
-    SearchResultDTO result = elasticsearchService.search(request);
+    SearchResultDTO result = searchService.search(request);
     return ResponseEntity.ok(result);
   }
 

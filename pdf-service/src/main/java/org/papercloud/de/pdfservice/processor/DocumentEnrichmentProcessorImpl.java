@@ -2,12 +2,12 @@ package org.papercloud.de.pdfservice.processor;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.papercloud.de.common.dto.llm.EnrichmentResultDTO;
-import org.papercloud.de.common.events.EnrichmentEvent;
-import org.papercloud.de.common.events.IndexDocumentEvent;
-import org.papercloud.de.common.events.payload.IndexDocumentPayload;
-import org.papercloud.de.common.util.DocumentEnrichmentService;
-import org.papercloud.de.common.util.OcrTextCleaningService;
+import org.papercloud.de.core.dto.llm.EnrichmentResultDTO;
+import org.papercloud.de.core.events.EnrichmentEvent;
+import org.papercloud.de.core.events.IndexDocumentEvent;
+import org.papercloud.de.core.events.payload.IndexDocumentPayload;
+import org.papercloud.de.core.ports.outbound.EnrichmentService;
+import org.papercloud.de.core.ports.outbound.OcrTextCleaningService;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfservice.errors.DocumentEnrichmentException;
@@ -29,8 +29,8 @@ import java.util.List;
 @Slf4j
 public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProcessor {
 
-    private final DocumentEnrichmentService documentEnrichmentService;
-    private final OcrTextCleaningService ocrTextCleaningService;
+    private final EnrichmentService enrichmentService;
+    private final OcrTextCleaningService textCleaningService;
     private final DocumentRepository documentRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final TransactionTemplate transactionTemplate;
@@ -46,7 +46,7 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
         String cleanedText = cleanFirstPageText(event.pageTexts());
         long startTime = System.nanoTime();
 
-        return documentEnrichmentService.enrichTextAsync(cleanedText)
+        return enrichmentService.enrichTextAsync(cleanedText)
                 .switchIfEmpty(Mono.just(getFallbackResult()))
                 .onErrorMap(ex -> new DocumentEnrichmentException("Enrichment failed", ex))
                 .map(result -> result == null ? getFallbackResult() : result)
@@ -70,7 +70,7 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
 
     private String cleanFirstPageText(List<String> pageTexts) {
         // validatePageTexts already ensures index 0 exists
-        return ocrTextCleaningService.cleanOcrText(pageTexts.get(0));
+        return textCleaningService.cleanOcrText(pageTexts.get(0));
     }
 
     private EnrichmentResultDTO getFallbackResult() {

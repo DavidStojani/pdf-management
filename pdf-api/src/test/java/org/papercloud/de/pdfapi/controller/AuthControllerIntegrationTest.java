@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.papercloud.de.common.dto.auth.LoginRequest;
-import org.papercloud.de.common.dto.auth.RegisterRequest;
+import org.papercloud.de.core.dto.auth.LoginRequest;
+import org.papercloud.de.core.dto.auth.RegisterRequest;
 import org.papercloud.de.pdfdatabase.entity.RoleEntity;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.RoleRepository;

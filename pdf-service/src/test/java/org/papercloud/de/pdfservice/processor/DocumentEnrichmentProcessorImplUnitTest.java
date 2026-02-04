@@ -8,12 +8,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.papercloud.de.common.dto.llm.EnrichmentResultDTO;
-import org.papercloud.de.common.events.EnrichmentEvent;
-import org.papercloud.de.common.events.IndexDocumentEvent;
-import org.papercloud.de.common.events.payload.IndexDocumentPayload;
-import org.papercloud.de.common.util.DocumentEnrichmentService;
-import org.papercloud.de.common.util.OcrTextCleaningService;
+import org.papercloud.de.core.dto.llm.EnrichmentResultDTO;
+import org.papercloud.de.core.events.EnrichmentEvent;
+import org.papercloud.de.core.events.IndexDocumentEvent;
+import org.papercloud.de.core.events.payload.IndexDocumentPayload;
+import org.papercloud.de.core.ports.outbound.EnrichmentService;
+import org.papercloud.de.core.ports.outbound.OcrTextCleaningService;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfservice.errors.DocumentEnrichmentException;
@@ -38,7 +38,7 @@ import static org.mockito.Mockito.when;
 class DocumentEnrichmentProcessorImplUnitTest {
 
     @Mock
-    private DocumentEnrichmentService documentEnrichmentService;
+    private EnrichmentService documentEnrichmentService;
 
     @Mock
     private OcrTextCleaningService ocrTextCleaningService;

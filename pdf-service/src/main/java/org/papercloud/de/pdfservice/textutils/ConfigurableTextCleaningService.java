@@ -1,7 +1,7 @@
 package org.papercloud.de.pdfservice.textutils;
 
 import lombok.RequiredArgsConstructor;
-import org.papercloud.de.common.util.OcrTextCleaningService;
+import org.papercloud.de.core.ports.outbound.OcrTextCleaningService;
 import org.papercloud.de.pdfservice.config.TextCleaningConfiguration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;

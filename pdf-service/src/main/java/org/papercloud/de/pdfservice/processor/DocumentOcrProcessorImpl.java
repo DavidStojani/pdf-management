@@ -2,7 +2,7 @@ package org.papercloud.de.pdfservice.processor;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.papercloud.de.common.util.PdfTextExtractorService;
+import org.papercloud.de.pdfservice.textutils.PdfTextExtractorService;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;

@@ -4,9 +4,9 @@ package org.papercloud.de.pdfservice.search;
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 
-import org.papercloud.de.common.dto.document.DocumentDTO;
-import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
-import org.papercloud.de.common.dto.document.DocumentUploadDTO;
+import org.papercloud.de.core.dto.document.DocumentDTO;
+import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
+import org.papercloud.de.core.dto.document.DocumentUploadDTO;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.multipart.MultipartFile;
 

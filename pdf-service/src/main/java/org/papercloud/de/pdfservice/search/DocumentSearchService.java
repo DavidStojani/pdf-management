@@ -1,6 +1,6 @@
 package org.papercloud.de.pdfservice.search;
 
-import org.papercloud.de.common.dto.search.SearchHitDTO;
+import org.papercloud.de.core.dto.search.SearchHitDTO;
 
 public interface DocumentSearchService {
 

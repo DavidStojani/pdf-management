@@ -1,7 +1,7 @@
 package org.papercloud.de.pdfservice.textutils;
 
 import lombok.RequiredArgsConstructor;
-import org.papercloud.de.common.dto.document.DocumentUploadDTO;
+import org.papercloud.de.core.dto.document.DocumentUploadDTO;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfdatabase.repository.UserRepository;

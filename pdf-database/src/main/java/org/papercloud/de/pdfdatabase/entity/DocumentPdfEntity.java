@@ -29,6 +29,9 @@ public class DocumentPdfEntity {
 
   private Long size;
 
+  @Enumerated(EnumType.STRING)
+
+
   @Lob
   @Column(name = "pdf_content")
   @Convert(converter = EncryptedByteArrayConverter.class)

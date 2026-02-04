@@ -2,8 +2,8 @@ package org.papercloud.de.pdfservice.config;
 
 import jakarta.persistence.EntityManagerFactory;
 import org.mockito.Mockito;
-import org.papercloud.de.common.util.DocumentEnrichmentService;
-import org.papercloud.de.common.util.OcrTextCleaningService;
+import org.papercloud.de.core.ports.outbound.EnrichmentService;
+import org.papercloud.de.core.ports.outbound.OcrTextCleaningService;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfservice.processor.DocumentEnrichmentProcessor;
 import org.papercloud.de.pdfservice.processor.DocumentEnrichmentProcessorImpl;
@@ -51,8 +51,8 @@ public class TestConfig {
     // Mock external dependencies that aren't part of your module
     @Bean
     @Primary
-    public DocumentEnrichmentService documentEnrichmentService() {
-        return Mockito.mock(DocumentEnrichmentService.class);
+    public EnrichmentService documentEnrichmentService() {
+        return Mockito.mock(EnrichmentService.class);
     }
 
     @Bean
@@ -62,7 +62,7 @@ public class TestConfig {
     }
     @Bean
     public DocumentEnrichmentProcessor documentEnrichmentProcessor(
-            DocumentEnrichmentService enrichmentService,
+            EnrichmentService enrichmentService,
             OcrTextCleaningService cleaningService,
             ApplicationEventPublisher eventPublisher,
             DocumentRepository documentRepository,

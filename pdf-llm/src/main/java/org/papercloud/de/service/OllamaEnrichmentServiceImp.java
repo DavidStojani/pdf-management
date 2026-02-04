@@ -2,20 +2,25 @@ package org.papercloud.de.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.papercloud.de.common.dto.llm.EnrichmentResultDTO;
-import org.papercloud.de.common.util.DocumentEnrichmentService;
-import org.papercloud.de.common.util.LlmResponseProcessingService;
+import org.papercloud.de.core.dto.llm.EnrichmentResultDTO;
+import org.papercloud.de.core.ports.outbound.EnrichmentService;
+import org.papercloud.de.service.internal.LlmResponseProcessingService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
+/**
+ * Ollama implementation of the EnrichmentService port.
+ * This adapter communicates with an Ollama LLM instance.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class OllamaEnrichmentServiceImp implements DocumentEnrichmentService {
+public class OllamaEnrichmentServiceImp implements EnrichmentService {
 
     private static final String MODEL_NAME = "mistral";
     private static final String PROMPT_TEMPLATE =
@@ -35,11 +40,11 @@ public class OllamaEnrichmentServiceImp implements DocumentEnrichmentService {
                 .filter(responseBody -> responseBody != null && !responseBody.isBlank())
                 .flatMap(this::mapResponseToEnrichmentResult)
                 // no Body (404 etc.) → fallback
-                .switchIfEmpty(Mono.empty())
+                .switchIfEmpty(Mono.just(getFallbackResult()))
                 // absolutely any unexpected error → fallback
                 .onErrorResume(ex -> {
                     log.error("Error while enriching text via Ollama. Returning fallback result.", ex);
-                    return Mono.empty();
+                    return Mono.just(getFallbackResult());
                 });
     }
 
@@ -69,8 +74,16 @@ public class OllamaEnrichmentServiceImp implements DocumentEnrichmentService {
                 });
     }
 
+    private EnrichmentResultDTO getFallbackResult() {
+        return EnrichmentResultDTO.builder()
+                .title("Unknown Title")
+                .date_sent("01.01.2000")
+                .tags(List.of())
+                .flagFailedEnrichment(true)
+                .build();
+    }
+
     private String buildPrompt(String plainText) {
         return PROMPT_TEMPLATE.formatted(plainText);
     }
-
 }

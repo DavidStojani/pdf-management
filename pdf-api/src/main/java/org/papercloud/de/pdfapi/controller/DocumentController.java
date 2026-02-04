@@ -7,9 +7,9 @@ import java.nio.file.AccessDeniedException;
 import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
-import org.papercloud.de.common.dto.document.DocumentDTO;
-import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
-import org.papercloud.de.common.dto.document.FolderPathDTO;
+import org.papercloud.de.core.dto.document.DocumentDTO;
+import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
+import org.papercloud.de.core.dto.document.FolderPathDTO;
 import org.papercloud.de.pdfservice.search.DocumentService;
 import org.papercloud.de.pdfservice.textutils.FolderScannerService;
 import org.slf4j.Logger;

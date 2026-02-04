@@ -26,7 +26,7 @@ public class WebClientConfig {
 
         //ToDo: hier andere Lösung als localhost
         return WebClient.builder()
-                .baseUrl("http://localhost:11434")
+                .baseUrl("http://ollama:11434")
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();
     }

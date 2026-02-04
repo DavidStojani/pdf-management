@@ -13,11 +13,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
-import org.papercloud.de.common.dto.document.DocumentMapper;
+import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
+import org.papercloud.de.pdfservice.mapper.DocumentServiceMapper;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
+import org.papercloud.de.pdfservice.errors.DocumentNotFoundException;
 import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,7 +28,7 @@ class DocumentServiceImplTest {
   private DocumentRepository documentRepository;
 
   @Mock
-  private DocumentMapper documentMapper;
+  private DocumentServiceMapper documentMapper;
 
   @InjectMocks
   private DocumentServiceImpl documentService;
@@ -64,13 +65,13 @@ class DocumentServiceImplTest {
 
   // Not found
   @Test
-  void downloadDocument_whenDocumentNotFound_shouldThrowNoSuchElementException() {
+  void downloadDocument_whenDocumentNotFound_shouldThrowDocumentNotFoundException() {
     // Given
     Long documentId = 1L;
     when(documentRepository.findById(documentId)).thenReturn(Optional.empty());
 
     // When / Then
-    assertThrows(ResponseStatusException.class, () ->
+    assertThrows(DocumentNotFoundException.class, () ->
             documentService.downloadDocument("anyuser", documentId)
     );
   }

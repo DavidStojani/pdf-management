@@ -1,56 +1,52 @@
 package org.papercloud.de.pdfsearch.service;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
-import co.elastic.clients.elasticsearch.core.search.Hit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.papercloud.de.common.dto.search.IndexableDocumentDTO;
-import org.papercloud.de.common.dto.search.SearchHitDTO;
-import org.papercloud.de.common.dto.search.SearchRequestDTO;
-import org.papercloud.de.common.dto.search.SearchResultDTO;
-import org.papercloud.de.common.events.payload.IndexDocumentPayload;
+import org.papercloud.de.core.dto.search.IndexableDocumentDTO;
+import org.papercloud.de.core.dto.search.SearchHitDTO;
+import org.papercloud.de.core.dto.search.SearchRequestDTO;
+import org.papercloud.de.core.dto.search.SearchResultDTO;
+import org.papercloud.de.core.ports.outbound.SearchService;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
+/**
+ * Elasticsearch implementation of the SearchService port.
+ * This adapter handles document indexing and full-text search using Elasticsearch.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ElasticsearchServiceImpl implements ElasticsearchService {
+public class ElasticsearchServiceImpl implements SearchService {
 
     private final ElasticsearchClient elasticsearchClient;
     private static final String INDEX_NAME = "documents";
 
     @Override
-    public void indexDocument(IndexDocumentPayload payload) {
-        IndexableDocumentDTO dto = payload.toDto();
-
+    public void indexDocument(IndexableDocumentDTO dto) {
         try {
             elasticsearchClient.index(i -> i
                     .index(INDEX_NAME)
-                    .id(String.valueOf(payload.id()))
+                    .id(String.valueOf(dto.getId()))
                     .document(dto)
             );
-            log.info("Indexed document ID {} into Elasticsearch", payload.id());
+            log.info("Indexed document ID {} into Elasticsearch", dto.getId());
         } catch (IOException e) {
-            log.error("Failed to index document {}", payload.id(), e);
+            log.error("Failed to index document {}", dto.getId(), e);
         }
     }
+
     @Override
     public SearchResultDTO search(SearchRequestDTO req) {
         String query = req.getQuery();
         String username = req.getUsername();
-        Integer year = req.getYear();
-        List<String> tags = req.getTags();
-        int page = req.getPage();
-        int size = req.getSize();
+        int page = req.getPage() != null ? req.getPage() : 0;
+        int size = req.getSize() != null ? req.getSize() : 10;
 
         try {
             // Build the bool query
@@ -65,35 +61,18 @@ public class ElasticsearchServiceImpl implements ElasticsearchService {
             }
 
             // 2. Restrict to this user
-            boolQ.filter(f -> f.term(t -> t
-                    .field("username.keyword")
-                    .value(username)
-            ));
-
-            /*/ 3. Year filter
-            if (year != null) {
+            if (username != null) {
                 boolQ.filter(f -> f.term(t -> t
-                        .field("year")
-                        .value(year)
+                        .field("username.keyword")
+                        .value(username)
                 ));
             }
-
-            // 4. Tags filter
-            if (tags != null && !tags.isEmpty()) {
-                boolQ.filter(f -> f.terms(t -> t
-                        .field("tags.keyword")
-                        .terms(terms -> terms
-                                .value(tags.stream().map(FieldValue::of).toList())
-                        )
-                ));
-            }
-
-             */
 
             // Execute the search
             SearchResponse<IndexableDocumentDTO> resp = elasticsearchClient.search(s -> s
-                            .index("documents")         // your index name
-
+                            .index(INDEX_NAME)
+                            .from(page * size)
+                            .size(size)
                             .query(q -> q.bool(boolQ.build())),
                     IndexableDocumentDTO.class
             );
@@ -129,4 +108,16 @@ public class ElasticsearchServiceImpl implements ElasticsearchService {
         }
     }
 
+    @Override
+    public void deleteDocument(Long documentId) {
+        try {
+            elasticsearchClient.delete(d -> d
+                    .index(INDEX_NAME)
+                    .id(String.valueOf(documentId))
+            );
+            log.info("Deleted document ID {} from Elasticsearch", documentId);
+        } catch (IOException e) {
+            log.error("Failed to delete document {}", documentId, e);
+        }
+    }
 }

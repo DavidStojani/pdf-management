@@ -5,6 +5,8 @@
     <file url="file://$PROJECT_DIR$/pdf-api/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/pdf-common/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/pdf-common/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/pdf-core/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/pdf-core/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/pdf-database/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/pdf-database/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/pdf-llm/src/main/java" charset="UTF-8" />

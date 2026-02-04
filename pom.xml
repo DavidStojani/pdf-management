@@ -11,14 +11,15 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>pdf-core</module>
         <module>pdf-api</module>
         <module>pdf-service</module>
         <module>pdf-database</module>
         <module>pdf-security</module>
         <module>pdf-search</module>
-        <module>pdf-common</module>
         <module>pdf-orc</module>
         <module>pdf-llm</module>
+        <!-- pdf-common is deprecated - code moved to pdf-core -->
     </modules>
 
     <properties>

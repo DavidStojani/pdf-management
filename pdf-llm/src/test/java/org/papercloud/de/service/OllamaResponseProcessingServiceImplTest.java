@@ -6,7 +6,7 @@ import org.assertj.core.api.ListAssert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.papercloud.de.common.dto.llm.EnrichmentResultDTO;
+import org.papercloud.de.core.dto.llm.EnrichmentResultDTO;
 
 import java.util.List;
 import java.util.Optional;

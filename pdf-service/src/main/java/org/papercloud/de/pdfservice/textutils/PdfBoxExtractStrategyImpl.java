@@ -3,7 +3,7 @@ package org.papercloud.de.pdfservice.textutils;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.papercloud.de.common.util.TextExtractionStrategy;
+import org.papercloud.de.core.ports.outbound.TextExtractionService;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class PdfBoxExtractStrategyImpl implements TextExtractionStrategy {
+public class PdfBoxExtractStrategyImpl implements TextExtractionService {
     @Override
     public List<String> extractText(byte[] pdfBytes) throws IOException {
         // Your existing PDFBox code

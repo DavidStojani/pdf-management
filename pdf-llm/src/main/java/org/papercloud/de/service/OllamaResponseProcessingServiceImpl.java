@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.papercloud.de.common.dto.llm.EnrichmentResultDTO;
-import org.papercloud.de.common.util.LlmResponseProcessingService;
+import org.papercloud.de.core.dto.llm.EnrichmentResultDTO;
+import org.papercloud.de.service.internal.LlmResponseProcessingService;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
