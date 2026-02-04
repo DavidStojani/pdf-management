@@ -2,9 +2,9 @@ package org.papercloud.de.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.papercloud.de.common.dto.llm.EnrichmentResultDTO;
-import org.papercloud.de.common.util.DocumentEnrichmentService;
-import org.papercloud.de.common.util.LlmResponseProcessingService;
+import org.papercloud.de.core.dto.llm.EnrichmentResultDTO;
+import org.papercloud.de.core.ports.outbound.EnrichmentService;
+import org.papercloud.de.service.internal.LlmResponseProcessingService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -13,10 +13,14 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Ollama implementation of the EnrichmentService port.
+ * This adapter communicates with an Ollama LLM instance.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class OllamaEnrichmentServiceImp implements DocumentEnrichmentService {
+public class OllamaEnrichmentServiceImp implements EnrichmentService {
 
     private static final String MODEL_NAME = "mistral";
     private static final String PROMPT_TEMPLATE =
@@ -82,5 +86,4 @@ public class OllamaEnrichmentServiceImp implements DocumentEnrichmentService {
     private String buildPrompt(String plainText) {
         return PROMPT_TEMPLATE.formatted(plainText);
     }
-
 }

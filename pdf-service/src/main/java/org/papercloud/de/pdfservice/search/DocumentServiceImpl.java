@@ -1,16 +1,11 @@
 package org.papercloud.de.pdfservice.search;
 
-import java.io.IOException;
-import java.nio.file.AccessDeniedException;
-import java.time.LocalDateTime;
-
 import lombok.RequiredArgsConstructor;
-import org.papercloud.de.common.dto.document.DocumentDTO;
-import org.papercloud.de.common.dto.document.DocumentDownloadDTO;
-import org.papercloud.de.common.dto.document.DocumentMapper;
-import org.papercloud.de.common.dto.document.DocumentUploadDTO;
-import org.papercloud.de.common.events.OcrEvent;
-import org.papercloud.de.common.util.PdfTextExtractorService;
+import org.papercloud.de.core.dto.document.DocumentDTO;
+import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
+import org.papercloud.de.core.dto.document.DocumentUploadDTO;
+import org.papercloud.de.core.events.OcrEvent;
+import org.papercloud.de.pdfservice.mapper.DocumentServiceMapper;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
@@ -20,6 +15,7 @@ import org.papercloud.de.pdfservice.errors.DocumentNotFoundException;
 import org.papercloud.de.pdfservice.errors.DocumentUploadException;
 import org.papercloud.de.pdfservice.errors.InvalidDocumentException;
 import org.papercloud.de.pdfservice.errors.UserAuthenticationException;
+import org.papercloud.de.pdfservice.processor.DocumentOcrProcessor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
@@ -28,6 +24,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.AccessDeniedException;
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class DocumentServiceImpl implements DocumentService {
@@ -35,26 +35,16 @@ public class DocumentServiceImpl implements DocumentService {
     private final UserRepository userRepository;
     private final DocumentRepository documentRepository;
     private final PageRepository pageRepository;
-    private final PdfTextExtractorService pdfTextExtractorService;
-    private final DocumentMapper documentMapper;
+    private final DocumentServiceMapper documentMapper;
     private final ApplicationEventPublisher publisher;
+    private final DocumentOcrProcessor documentOcrProcessor;
 
     @Override
     public DocumentDTO processUpload(MultipartFile file, Authentication authentication) {
-        Authentication resolvedAuth = authentication != null ? authentication : SecurityContextHolder.getContext().getAuthentication();
-
-        if (resolvedAuth == null || !resolvedAuth.isAuthenticated()) {
-            throw new UserAuthenticationException("User must be authenticated to upload documents.");
-        }
-
-        if (file == null || file.isEmpty()) {
-            throw new InvalidDocumentException("Uploaded file must not be empty.");
-        }
-
-        String contentType = file.getContentType();
-        if (contentType == null || !MediaType.APPLICATION_PDF_VALUE.equalsIgnoreCase(contentType)) {
-            throw new InvalidDocumentException("Invalid file format. Only PDF files are allowed.");
-        }
+        Authentication resolvedAuth = resolveAuthentication(authentication);
+        validateAuthentication(resolvedAuth);
+        validateFile(file);
+        validatePdfContentType(file);
 
         DocumentUploadDTO uploadDTO = buildUploadDto(file);
         return processDocumentSafely(uploadDTO, resolvedAuth.getName());
@@ -63,13 +53,13 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public DocumentDTO processDocument(DocumentUploadDTO uploadDTO, String username) throws IOException {
         DocumentDTO documentDTO = saveDocToDB(username, uploadDTO);
-        publisher.publishEvent(new OcrEvent(documentDTO.getId(),documentDTO.getPdfContent()));
+        publisher.publishEvent(new OcrEvent(documentDTO.getId(), documentDTO.getPdfContent()));
         return documentDTO;
     }
 
 
     @Transactional
-    private DocumentDTO saveDocToDB(String username, DocumentUploadDTO uploadDTO) {
+    protected DocumentDTO saveDocToDB(String username, DocumentUploadDTO uploadDTO) {
         UserEntity user = findUserOrThrow(username);
 
         DocumentPdfEntity documentPdfEntity = DocumentPdfEntity.builder()
@@ -96,6 +86,7 @@ public class DocumentServiceImpl implements DocumentService {
 
         return documentMapper.toDownloadDTO(document);
     }
+
 
     // 🔽 --- Private Helper Methods --- 🔽
 
@@ -128,6 +119,32 @@ public class DocumentServiceImpl implements DocumentService {
     private DocumentPdfEntity getDocumentOrThrow(Long id) {
         return documentRepository.findById(id)
                 .orElseThrow(() -> new DocumentNotFoundException("Document not found with id: " + id));
+    }
+
+    private Authentication resolveAuthentication(Authentication authentication) {
+        if (authentication != null) {
+            return authentication;
+        }
+        return SecurityContextHolder.getContext().getAuthentication();
+    }
+
+    private void validateAuthentication(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new UserAuthenticationException("User must be authenticated to upload documents.");
+        }
+    }
+
+    private void validateFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new InvalidDocumentException("Uploaded file must not be empty.");
+        }
+    }
+
+    private void validatePdfContentType(MultipartFile file) {
+        String contentType = file.getContentType();
+        if (!MediaType.APPLICATION_PDF_VALUE.equalsIgnoreCase(contentType)) {
+            throw new InvalidDocumentException("Invalid file format. Only PDF files are allowed.");
+        }
     }
 
 }

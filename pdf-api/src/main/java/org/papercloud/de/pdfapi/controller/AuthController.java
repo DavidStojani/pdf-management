@@ -2,10 +2,10 @@ package org.papercloud.de.pdfapi.controller;
 
 
 import lombok.RequiredArgsConstructor;
-import org.papercloud.de.common.dto.auth.*;
-import org.papercloud.de.common.auth.AuthenticationService;
-import org.papercloud.de.common.auth.PasswordService;
-import org.papercloud.de.common.auth.VerificationService;
+import org.papercloud.de.core.dto.auth.*;
+import org.papercloud.de.core.ports.inbound.AuthenticationService;
+import org.papercloud.de.core.ports.inbound.PasswordService;
+import org.papercloud.de.pdfsecurity.service.VerificationJWTService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +17,7 @@ public class AuthController {
 
     private final AuthenticationService authenticationService;
     private final PasswordService passwordService;
-    private final VerificationService verificationService;
+    private final VerificationJWTService verificationService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {

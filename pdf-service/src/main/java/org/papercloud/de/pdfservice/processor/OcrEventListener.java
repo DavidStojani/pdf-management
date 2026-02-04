@@ -1,9 +1,10 @@
 package org.papercloud.de.pdfservice.processor;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.papercloud.de.common.events.EnrichmentEvent;
-import org.papercloud.de.common.events.OcrEvent;
+import org.papercloud.de.core.events.EnrichmentEvent;
+import org.papercloud.de.core.events.OcrEvent;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
@@ -13,7 +14,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.io.IOException;
 import java.util.List;
@@ -31,7 +33,7 @@ public class OcrEventListener {
 
     @EventListener
     @Async
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleOcrEvent(OcrEvent event) {
         Long docId = event.documentId();
         log.info("Received OCR event for document ID: {}", docId);
@@ -57,7 +59,8 @@ public class OcrEventListener {
         }
     }
 
-    private void savePages(DocumentPdfEntity document, List<String> pageTexts) {
+    @Transactional
+    protected void savePages(DocumentPdfEntity document, List<String> pageTexts) {
         List<PagesPdfEntity> pages = IntStream.range(0, pageTexts.size())
                 .mapToObj(i -> PagesPdfEntity.builder()
                         .document(document)

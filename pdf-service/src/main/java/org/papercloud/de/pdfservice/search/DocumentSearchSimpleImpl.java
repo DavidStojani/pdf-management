@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
-import org.papercloud.de.common.dto.search.SearchHitDTO;
-import org.papercloud.de.common.dto.search.SearchResultDTO;
+import org.papercloud.de.core.dto.search.SearchHitDTO;
+import org.papercloud.de.core.dto.search.SearchResultDTO;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;

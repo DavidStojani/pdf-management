@@ -6,9 +6,8 @@ import net.sourceforge.tess4j.TesseractException;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
-import org.papercloud.de.common.util.OcrTextCleaningService;
-import org.papercloud.de.common.util.TextExtractionStrategy;
-import org.springframework.stereotype.Component;
+import org.papercloud.de.core.ports.outbound.OcrTextCleaningService;
+import org.papercloud.de.core.ports.outbound.TextExtractionService;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -17,17 +16,20 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-@Component
 @RequiredArgsConstructor
-public class TessOcrExtractionStrategyImpl implements TextExtractionStrategy {
+public class TessOcrExtractionStrategyImpl implements TextExtractionService {
 
     private final OcrTextCleaningService ocrTextCleaningService;
-    private final Tesseract tesseract;
+    private final Tesseract tesseract = new Tesseract();
 
     @Override
     public List<String> extractText(byte[] pdfBytes) throws IOException {
         List<String> textByPage = new ArrayList<>();
 
+        tesseract.setDatapath("pdf-orc/src/main/resources");
+        tesseract.setLanguage("de");
+        tesseract.setOcrEngineMode(1);
+        tesseract.setTessVariable("user_defined_dpi","300");
         try (PDDocument document = Loader.loadPDF(pdfBytes)) {
             PDFRenderer renderer = new PDFRenderer(document);
             for (int i = 0; i < document.getNumberOfPages(); i++) {

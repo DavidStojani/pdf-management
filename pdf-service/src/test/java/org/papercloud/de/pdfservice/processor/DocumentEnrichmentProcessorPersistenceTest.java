@@ -4,11 +4,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.papercloud.de.common.dto.llm.EnrichmentResultDTO;
-import org.papercloud.de.common.events.EnrichmentEvent;
-import org.papercloud.de.common.events.IndexDocumentEvent;
-import org.papercloud.de.common.util.DocumentEnrichmentService;
-import org.papercloud.de.common.util.OcrTextCleaningService;
+import org.papercloud.de.core.dto.llm.EnrichmentResultDTO;
+import org.papercloud.de.core.events.EnrichmentEvent;
+import org.papercloud.de.core.events.IndexDocumentEvent;
+import org.papercloud.de.core.ports.outbound.EnrichmentService;
+import org.papercloud.de.core.ports.outbound.OcrTextCleaningService;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +39,7 @@ class DocumentEnrichmentProcessorPersistenceTest {
     private DocumentRepository documentRepository;
 
     @MockBean
-    private DocumentEnrichmentService documentEnrichmentService;
+    private EnrichmentService documentEnrichmentService;
 
     @MockBean
     private OcrTextCleaningService ocrTextCleaningService;

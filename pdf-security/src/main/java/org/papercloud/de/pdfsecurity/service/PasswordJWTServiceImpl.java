@@ -6,7 +6,7 @@ import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.UserRepository;
 
 
-import org.papercloud.de.common.auth.PasswordService;
+import org.papercloud.de.core.ports.inbound.PasswordService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
