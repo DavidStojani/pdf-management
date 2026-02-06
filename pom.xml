@@ -12,14 +12,13 @@
 
     <modules>
         <module>pdf-core</module>
-        <module>pdf-api</module>
-        <module>pdf-service</module>
-        <module>pdf-database</module>
-        <module>pdf-security</module>
-        <module>pdf-search</module>
-        <module>pdf-orc</module>
-        <module>pdf-llm</module>
-        <!-- pdf-common is deprecated - code moved to pdf-core -->
+        <module>pdf-inbound-api</module>
+        <module>pdf-application</module>
+        <module>pdf-outbound-database</module>
+        <module>pdf-infrastructure-security</module>
+        <module>pdf-outbound-search</module>
+        <module>pdf-outbound-ocr</module>
+        <module>pdf-outbound-llm</module>
     </modules>
 
     <properties>

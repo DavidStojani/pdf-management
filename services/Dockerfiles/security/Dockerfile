@@ -2,7 +2,7 @@ FROM eclipse-temurin:21-jdk-alpine
 
 WORKDIR /app
 
-COPY pdf-security/target/pdf-security.jar app.jar
+COPY pdf-infrastructure-security/target/pdf-infrastructure-security.jar app.jar
 
 EXPOSE 8082
 

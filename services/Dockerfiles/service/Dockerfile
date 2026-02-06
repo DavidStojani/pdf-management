@@ -5,7 +5,7 @@ FROM eclipse-temurin:21-jdk-alpine
 WORKDIR /app
 
 # Copy the jar file built by Maven
-COPY pdf-service/target/pdf-service.jar app.jar
+COPY pdf-application/target/pdf-application.jar app.jar
 
 # Expose the port (adjust if needed)
 EXPOSE 8081

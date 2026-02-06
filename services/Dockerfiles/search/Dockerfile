@@ -2,7 +2,7 @@ FROM eclipse-temurin:17-jdk-alpine
 
 WORKDIR /app
 
-COPY pdf-search/target/pdf-search.jar app.jar
+COPY pdf-outbound-search/target/pdf-outbound-search.jar app.jar
 
 EXPOSE 8083
 
