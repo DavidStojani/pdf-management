@@ -62,6 +62,7 @@ public class DocumentServiceImpl implements DocumentService {
     protected DocumentDTO saveDocToDB(String username, DocumentUploadDTO uploadDTO) {
         UserEntity user = findUserOrThrow(username);
 
+        //TODO: set Status as UPLOADED
         DocumentPdfEntity documentPdfEntity = DocumentPdfEntity.builder()
                 .filename(uploadDTO.getFileName())
                 .contentType(uploadDTO.getContentType())

@@ -41,6 +41,7 @@ public class OcrEventListener {
         DocumentPdfEntity document = documentRepository.findById(docId)
                 .orElseThrow(() -> new DocumentNotFoundException("Document not found for ID: " + docId));
 
+        //TODO set status as OCR_IN_PROGRESS
         try {
             List<String> pageTexts = ocrProcessor.extractTextFromPdf(event.pdfBytes());
 

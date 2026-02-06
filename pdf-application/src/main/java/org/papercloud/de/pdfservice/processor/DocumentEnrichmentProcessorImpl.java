@@ -41,6 +41,8 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
     public Mono<EnrichmentResultDTO> enrichDocument(EnrichmentEvent event) {
         log.info("Starting document enrichment process for document ID: {}", event.documentId());
 
+        //ToDo: set status Enrich_ON_PROGRESS
+
         validatePageTexts(event.pageTexts());
 
         String cleanedText = cleanFirstPageText(event.pageTexts());
@@ -50,7 +52,7 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
                 .switchIfEmpty(Mono.just(getFallbackResult()))
                 .onErrorMap(ex -> new DocumentEnrichmentException("Enrichment failed", ex))
                 .map(result -> result == null ? getFallbackResult() : result)
-                .map(result -> persistAndPublish(event, result))
+                //.map(result -> persistAndPublish(event, result))
                 .doOnSuccess(result -> log.info("Successfully completed enrichment for document ID: {}", event.documentId()))
                 .doOnError(ex -> log.error("Enrichment failed for document {}", event.documentId(), ex))
                 .doFinally(signalType -> logEnrichmentDuration(startTime))

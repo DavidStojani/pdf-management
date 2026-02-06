@@ -21,10 +21,11 @@ public class EnrichmentEventListener {
     @EventListener
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleDocumentUploaded(EnrichmentEvent event) {
-        log.info("EnrichmentEventListener received event for docId {}", event.documentId());
+        //TODO: Set status Enrich_ON_PROGRESS
+        log.info("EnrichmentEvent received event for docId {}", event.documentId());
         enrichmentenrichmentProcessor.enrichDocument(event)
-                .doOnSuccess(result -> log.info("Result found for DOC: {}", result))
-                .doOnError(error -> log.error("Error while enriching document {}", event.documentId(), error))
+                .doOnSuccess(result -> log.info("Result found for DOC: {}", result)) //TODO: set status ENRICH_COMPLETED
+                .doOnError(error -> log.error("Error while enriching document {}", event.documentId(), error)) //TODO: set status ENRICH_ERROR
                 .subscribe();
     }
 }

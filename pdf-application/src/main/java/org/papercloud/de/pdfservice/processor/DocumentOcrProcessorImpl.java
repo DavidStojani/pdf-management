@@ -26,6 +26,7 @@ public class DocumentOcrProcessorImpl implements DocumentOcrProcessor {
         try {
             List<String> pages = textExtractorService.extractTextFromPdf(pdfBytes);
             log.info("Successfully extracted text from PDF. Pages: {}", pages.size());
+            //TODO: Set status as OCR_COMPLETED
             return pages;
         } catch (IOException e) {
             log.error("Failed to extract text from PDF", e);
