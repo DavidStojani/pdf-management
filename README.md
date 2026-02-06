@@ -14,7 +14,7 @@ A modular Spring Boot application for ingesting, processing, and searching PDF d
 ## Core document flow
 1. **Upload** – `DocumentServiceImpl.processUpload` validates the authenticated user and PDF, persists the file, and publishes an `OcrEvent` with the raw bytes for downstream processing.
 2. **OCR** – `OcrEventListener` invokes `DocumentOcrProcessorImpl` to extract page text, saves per-page results, and emits an `EnrichmentEvent` containing the OCR output.
-3. **Enrichment** – `DocumentEnrichmentProcessorImpl` cleans the first page, calls the enrichment service asynchronously, persists title/date/tags back onto the document, and publishes an `IndexDocumentEvent` for search indexing.
+3. **Enrichment** – `DocumentEnrichmentProcessorImpl` cleans the first page, calls the enrichment service asynchronously, and persists title/date/tags back onto the document; a follow-up indexing step is triggered after enrichment completes.
 4. **Download** – `DocumentServiceImpl.downloadDocument` enforces ownership and streams the stored PDF bytes back to the caller.
 
 ## Running locally

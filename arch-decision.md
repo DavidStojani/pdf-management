@@ -110,13 +110,13 @@ public class PostgresDocumentRepository implements DocumentRepository {
 - `ports/outbound/` - DocumentRepository, UserRepository, EnrichmentService, SearchService, TextExtractionService
 - `ports/inbound/` - AuthenticationService, PasswordService
 - `dto/` - All DTOs moved from pdf-common
-- `events/` - OcrEvent, EnrichmentEvent, IndexDocumentEvent
+- `events/` - OcrEvent, EnrichmentEvent, DocumentEnrichedEvent
 
 ### Adapter Implementations
 - `pdf-database/adapter/PostgresDocumentRepository` - implements DocumentRepository
 - `pdf-database/adapter/PostgresUserRepository` - implements UserRepository
 - `pdf-llm/OllamaEnrichmentServiceImp` - implements EnrichmentService
-- `pdf-search/ElasticsearchServiceImpl` - implements SearchService
+- `pdf-outbound-search/ElasticsearchServiceImpl` - implements SearchService
 
 ## Dependency Flow
 
