@@ -22,7 +22,7 @@ import java.util.Map;
 @Slf4j
 public class OllamaEnrichmentServiceImp implements EnrichmentService {
 
-    private static final String MODEL_NAME = "mistral";
+    private static final String MODEL_NAME = "qwen2.5:0.5b";
     private static final String PROMPT_TEMPLATE =
             "Give me a json-format with title, date_sent as dd.MM.yyyy and 5 tags for this text: \"%s\"";
     private static final Duration OLLAMA_TIMEOUT = Duration.ofMinutes(10);

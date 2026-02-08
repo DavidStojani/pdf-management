@@ -20,9 +20,12 @@ public class EnrichmentEventListener {
     @EventListener
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleDocumentUploaded(EnrichmentEvent event) {
-        //TODO: Set status Enrich_ON_PROGRESS
         Long docId = event.documentId();
         log.info("EnrichmentEvent received event for docId {}", docId);
-        enrichmentProcessor.enrichDocument(docId);
+        try {
+            enrichmentProcessor.enrichDocument(docId);
+        } catch (Exception e) {
+            throw new RuntimeException(e); //TODO DO SOMETHING HERE WITH THE EXception
+        }
     }
 }

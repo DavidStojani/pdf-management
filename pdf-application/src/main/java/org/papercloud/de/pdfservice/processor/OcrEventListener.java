@@ -3,6 +3,7 @@ package org.papercloud.de.pdfservice.processor;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.papercloud.de.core.domain.Document;
 import org.papercloud.de.core.events.EnrichmentEvent;
 import org.papercloud.de.core.events.OcrEvent;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
@@ -10,6 +11,7 @@ import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfdatabase.repository.PageRepository;
 import org.papercloud.de.pdfservice.errors.DocumentNotFoundException;
+import org.papercloud.de.pdfservice.service.DocumentStatusService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
@@ -30,6 +32,7 @@ public class OcrEventListener {
     private final ApplicationEventPublisher eventPublisher;
     private final DocumentRepository documentRepository;
     private final PageRepository pageRepository;
+    private final DocumentStatusService documentStatusService;
 
     @EventListener
     @Async
@@ -41,28 +44,28 @@ public class OcrEventListener {
         DocumentPdfEntity document = documentRepository.findById(docId)
                 .orElseThrow(() -> new DocumentNotFoundException("Document not found for ID: " + docId));
 
-        //TODO set status as OCR_IN_PROGRESS
+        documentStatusService.updateStatus(document.getId(), Document.Status.OCR_IN_PROGRESS);
+
         try {
             byte[] pdfBytes = document.getPdfContent();
             if (pdfBytes == null || pdfBytes.length == 0) {
                 log.error("No PDF content found for document ID: {}", docId);
+                documentStatusService.updateStatus(document.getId(), Document.Status.OCR_ERROR);
                 return;
             }
 
             List<String> pageTexts = ocrProcessor.extractTextFromPdf(pdfBytes);
 
             log.info("OCR completed for document ID: {}, total pages: {}", docId, pageTexts.size());
-
+            documentStatusService.updateStatus(document.getId(), Document.Status.OCR_COMPLETED);
             savePages(document, pageTexts);
-
-            // Optionally update document state here (e.g., set OCR_PROCESSED flag)
 
             // Trigger enrichment
             eventPublisher.publishEvent(new EnrichmentEvent(docId));
 
         } catch (IOException e) {
             log.error("OCR processing failed for document ID: {}", docId, e);
-            // Optional: Set document status to FAILED, or publish failure event
+            documentStatusService.updateStatus(document.getId(), Document.Status.OCR_ERROR);
         }
     }
 

@@ -9,10 +9,7 @@ import lombok.Setter;
 import org.papercloud.de.pdfdatabase.config.EncryptedStringConverter;
 
 @Entity
-@Table(name = "document_pages", indexes = {
-  @Index(name = "idx_document_id", columnList = "document_id"),
-  @Index(name = "idx_extracted_text", columnList = "page_text")
-})
+@Table(name = "document_pages")
 @Getter
 @Setter
 @NoArgsConstructor

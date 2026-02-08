@@ -1,11 +1,11 @@
 package org.papercloud.de.pdfservice.service;
 
 import lombok.RequiredArgsConstructor;
+import org.papercloud.de.core.domain.Document;
 import org.papercloud.de.core.dto.document.DocumentDTO;
 import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.core.dto.document.DocumentUploadDTO;
 import org.papercloud.de.core.events.OcrEvent;
-import org.papercloud.de.pdfservice.mapper.DocumentServiceMapper;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
@@ -15,6 +15,7 @@ import org.papercloud.de.pdfservice.errors.DocumentNotFoundException;
 import org.papercloud.de.pdfservice.errors.DocumentUploadException;
 import org.papercloud.de.pdfservice.errors.InvalidDocumentException;
 import org.papercloud.de.pdfservice.errors.UserAuthenticationException;
+import org.papercloud.de.pdfservice.mapper.DocumentServiceMapper;
 import org.papercloud.de.pdfservice.processor.DocumentOcrProcessor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
@@ -34,10 +35,8 @@ public class DocumentServiceImpl implements DocumentService {
 
     private final UserRepository userRepository;
     private final DocumentRepository documentRepository;
-    private final PageRepository pageRepository;
     private final DocumentServiceMapper documentMapper;
     private final ApplicationEventPublisher publisher;
-    private final DocumentOcrProcessor documentOcrProcessor;
 
     @Override
     public DocumentDTO processUpload(MultipartFile file, Authentication authentication) {
@@ -62,7 +61,6 @@ public class DocumentServiceImpl implements DocumentService {
     protected DocumentDTO saveDocToDB(String username, DocumentUploadDTO uploadDTO) {
         UserEntity user = findUserOrThrow(username);
 
-        //TODO: set Status as UPLOADED
         DocumentPdfEntity documentPdfEntity = DocumentPdfEntity.builder()
                 .filename(uploadDTO.getFileName())
                 .contentType(uploadDTO.getContentType())
@@ -70,6 +68,7 @@ public class DocumentServiceImpl implements DocumentService {
                 .size(uploadDTO.getSize())
                 .owner(user)
                 .uploadedAt(LocalDateTime.now())
+                .status(Document.Status.UPLOADED)
                 .build();
 
         documentRepository.save(documentPdfEntity);
