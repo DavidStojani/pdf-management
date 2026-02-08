@@ -22,6 +22,16 @@ import java.util.List;
 @Builder
 public class Document {
 
+    public enum Status {
+        UPLOADED,
+        OCR_IN_PROGRESS,
+        OCR_COMPLETED,
+        OCR_ERROR,
+        ENRICHMENT_IN_PROGRESS,
+        ENRICHMENT_COMPLETED,
+        ENRICHMENT_ERROR
+    }
+
     private Long id;
     private String title;
     private String filename;
@@ -40,6 +50,7 @@ public class Document {
 
     private LocalDate dateOnDocument;
     private boolean failedEnrichment;
+    private Status status;
 
     /**
      * Adds a page to this document.

@@ -53,7 +53,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public DocumentDTO processDocument(DocumentUploadDTO uploadDTO, String username) throws IOException {
         DocumentDTO documentDTO = saveDocToDB(username, uploadDTO);
-        publisher.publishEvent(new OcrEvent(documentDTO.getId(), documentDTO.getPdfContent()));
+        publisher.publishEvent(new OcrEvent(documentDTO.getId()));
         return documentDTO;
     }
 

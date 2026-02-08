@@ -2,6 +2,7 @@ package org.papercloud.de.pdfdatabase.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.papercloud.de.core.domain.Document;
 import org.papercloud.de.pdfdatabase.config.EncryptedByteArrayConverter;
 
 import java.time.LocalDate;
@@ -30,7 +31,7 @@ public class DocumentPdfEntity {
   private Long size;
 
   @Enumerated(EnumType.STRING)
-
+  private Document.Status status;
 
   @Lob
   @Column(name = "pdf_content")
@@ -46,6 +47,9 @@ public class DocumentPdfEntity {
   @JoinColumn(name = "user_id")
   private UserEntity owner;
 
+  @ElementCollection
+  @CollectionTable(name = "document_tags", joinColumns = @JoinColumn(name = "document_id"))
+  @Column(name = "tag")
   private List<String> tags; //TODO : do this better
 
   private LocalDate dateOnDocument;

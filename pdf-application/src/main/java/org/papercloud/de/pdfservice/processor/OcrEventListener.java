@@ -43,7 +43,13 @@ public class OcrEventListener {
 
         //TODO set status as OCR_IN_PROGRESS
         try {
-            List<String> pageTexts = ocrProcessor.extractTextFromPdf(event.pdfBytes());
+            byte[] pdfBytes = document.getPdfContent();
+            if (pdfBytes == null || pdfBytes.length == 0) {
+                log.error("No PDF content found for document ID: {}", docId);
+                return;
+            }
+
+            List<String> pageTexts = ocrProcessor.extractTextFromPdf(pdfBytes);
 
             log.info("OCR completed for document ID: {}, total pages: {}", docId, pageTexts.size());
 
@@ -52,7 +58,7 @@ public class OcrEventListener {
             // Optionally update document state here (e.g., set OCR_PROCESSED flag)
 
             // Trigger enrichment
-            eventPublisher.publishEvent(new EnrichmentEvent(docId, pageTexts));
+            eventPublisher.publishEvent(new EnrichmentEvent(docId));
 
         } catch (IOException e) {
             log.error("OCR processing failed for document ID: {}", docId, e);
