@@ -1,6 +1,7 @@
 package org.papercloud.de.pdfapi.controller;
 
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.papercloud.de.pdfapi.PdfApiApplication;
@@ -19,13 +20,12 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.web.multipart.MultipartFile;
 
 import static org.papercloud.de.core.domain.Document.Status.UPLOADED;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(
@@ -33,62 +33,156 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         classes = PdfApiApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@TestPropertySource(
-        locations = "classpath:application-test.yml")
+@TestPropertySource(locations = "classpath:application-test.yml")
 public class DocumentControllerIT {
+
+    private static final String DEFAULT_PASSWORD = "test";
+    private static final byte[] SAMPLE_PDF_CONTENT = "Fake PDF Content".getBytes();
 
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
-    DocumentRepository documentRepository;
+    private DocumentRepository documentRepository;
+
     @Autowired
     private UserRepository userRepository;
 
-    @Test
-    void test_ping() throws Exception {
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/api/documents/ping"))
-                .andExpect(status().isOk());
-
+    @BeforeEach
+    void setUp() {
+        documentRepository.deleteAll();
+        userRepository.deleteAll();
     }
 
     @Test
-    @WithMockUser(username = "testuser")
-    void test_download() throws Exception {
+    void ping_returnsOk() throws Exception {
+        mockMvc.perform(get("/api/documents/ping"))
+                .andExpect(status().isOk());
+    }
+
+    @Nested
+    class Download {
+
+        @Test
+        @WithMockUser(username = "testuser")
+        void returnsDocumentWithHeaders() throws Exception {
+            UserEntity user = createUser("testuser");
+            DocumentPdfEntity saved = createDocument(user, "test-file.pdf", SAMPLE_PDF_CONTENT);
+
+            mockMvc.perform(get("/api/documents/" + saved.getId() + "/download"))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"test-file.pdf\""))
+                    .andExpect(content().contentType(MediaType.APPLICATION_PDF_VALUE))
+                    .andExpect(content().bytes(SAMPLE_PDF_CONTENT));
+        }
+
+        @Test
+        @WithMockUser(username = "testuser")
+        void nonExistentDocument_returns404() throws Exception {
+            mockMvc.perform(get("/api/documents/99999/download"))
+                    .andDo(print())
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithMockUser(username = "testuser")
+        void documentOwnedByDifferentUser_returns403() throws Exception {
+            UserEntity owner = createUser("owner");
+            createUser("testuser");
+            DocumentPdfEntity saved = createDocument(owner, "private-file.pdf", SAMPLE_PDF_CONTENT);
+
+            mockMvc.perform(get("/api/documents/" + saved.getId() + "/download"))
+                    .andDo(print())
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        void withoutAuthentication_returns401() throws Exception {
+            UserEntity user = createUser("someuser");
+            DocumentPdfEntity saved = createDocument(user, "test-file.pdf", SAMPLE_PDF_CONTENT);
+
+            mockMvc.perform(get("/api/documents/" + saved.getId() + "/download"))
+                    .andDo(print())
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    class Upload {
+
+        @Test
+        @WithMockUser(username = "uploaduser")
+        void validPdfFile_returns200WithDocumentId() throws Exception {
+            createUser("uploaduser");
+
+            mockMvc.perform(multipart("/api/documents/upload")
+                            .file(createPdfMultipartFile("upload-test.pdf", SAMPLE_PDF_CONTENT)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.message").exists())
+                    .andExpect(jsonPath("$.documentId").exists());
+        }
+
+        @Test
+        void withoutAuthentication_returns401() throws Exception {
+            mockMvc.perform(multipart("/api/documents/upload")
+                            .file(createPdfMultipartFile("upload-test.pdf", SAMPLE_PDF_CONTENT)))
+                    .andDo(print())
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @WithMockUser(username = "uploaduser")
+        void nonPdfFile_returns400() throws Exception {
+            createUser("uploaduser");
+            MockMultipartFile textFile = new MockMultipartFile(
+                    "file", "test.txt", MediaType.TEXT_PLAIN_VALUE,
+                    "This is not a PDF".getBytes());
+
+            mockMvc.perform(multipart("/api/documents/upload")
+                            .file(textFile))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @WithMockUser(username = "uploaduser")
+        void emptyFile_returns400() throws Exception {
+            createUser("uploaduser");
+            MockMultipartFile emptyFile = new MockMultipartFile(
+                    "file", "empty.pdf", MediaType.APPLICATION_PDF_VALUE, new byte[0]);
+
+            mockMvc.perform(multipart("/api/documents/upload")
+                            .file(emptyFile))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    // --- Test helpers ---
+
+    private UserEntity createUser(String username) {
         UserEntity user = UserEntity.builder()
-                .username("testuser")
-                .password("test")
+                .username(username)
+                .password(DEFAULT_PASSWORD)
                 .build();
-        userRepository.save(user);
-        // 1. Arrange: Create and save a document to the H2 database
+        return userRepository.save(user);
+    }
+
+    private DocumentPdfEntity createDocument(UserEntity owner, String filename, byte[] content) {
         DocumentPdfEntity entity = DocumentPdfEntity.builder()
-                .filename("test-file.pdf")
+                .filename(filename)
                 .contentType(MediaType.APPLICATION_PDF_VALUE)
-                .pdfContent("Fake PDF Content".getBytes()) // Ensure this field name matches your entity
-                .owner(user)
+                .pdfContent(content)
+                .owner(owner)
                 .status(UPLOADED)
                 .build();
-
-        DocumentPdfEntity saved = documentRepository.save(entity);
-        Long documentId = saved.getId();
-
-        // 2. Act & Assert
-        mockMvc.perform(MockMvcRequestBuilders.get("/api/documents/" + documentId + "/download"))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"test-file.pdf\""))
-                .andExpect(content().contentType(MediaType.APPLICATION_PDF_VALUE))
-                .andExpect(content().bytes("Fake PDF Content".getBytes()));
+        return documentRepository.save(entity);
     }
 
-
-    private MultipartFile createValidPdfFile() {
-        return new MockMultipartFile(
-                "file",
-                "test.pdf",
-                MediaType.APPLICATION_PDF_VALUE,
-                "PDF content".getBytes()
-        );
+    private MockMultipartFile createPdfMultipartFile(String filename, byte[] content) {
+        return new MockMultipartFile("file", filename, MediaType.APPLICATION_PDF_VALUE, content);
     }
 }
