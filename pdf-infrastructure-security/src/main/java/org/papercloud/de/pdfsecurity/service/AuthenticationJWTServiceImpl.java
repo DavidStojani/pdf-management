@@ -11,6 +11,7 @@ import org.papercloud.de.pdfdatabase.repository.UserRepository;
 import org.papercloud.de.core.ports.inbound.AuthenticationService;
 import org.papercloud.de.pdfsecurity.util.JwtUtil;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -119,7 +120,7 @@ public class AuthenticationJWTServiceImpl implements AuthenticationService {
                 (org.springframework.security.core.userdetails.User) authentication.getPrincipal();
 
         UserEntity user = userRepository.findByUsername(principal.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new BadCredentialsException("User not found"));
 
         // Update last login time
         //user.setLastLogin(new Date());
