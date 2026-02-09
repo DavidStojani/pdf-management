@@ -6,7 +6,8 @@
       "Bash(ls:*)",
       "Bash(mvn compile:*)",
       "Bash(mvn test:*)",
-      "Bash(mvn install:*)"
+      "Bash(mvn install:*)",
+      "Bash(mvn clean test:*)"
     ]
   }
 }

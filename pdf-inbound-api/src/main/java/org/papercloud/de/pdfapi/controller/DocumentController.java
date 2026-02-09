@@ -10,11 +10,9 @@ import org.papercloud.de.pdfservice.textutils.FolderScannerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -44,15 +42,12 @@ public class DocumentController {
 
     @Operation(summary = "Download a PDF document")
     @GetMapping("/{id}/download")
-    public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id) throws AccessDeniedException {
-        DocumentDownloadDTO document = documentService.downloadDocument(getCurrentUsername(), id);
-
-        if (document == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
+    public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id, Authentication authentication) throws AccessDeniedException {
+        DocumentDownloadDTO document = documentService.downloadDocument(authentication.getName(), id);
+        String sanitizedFileName = document.getFileName().replaceAll("[^a-zA-Z0-9.\\-_ ()\\[\\]]", "_");
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + document.getFileName() + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + sanitizedFileName + "\"")
                 .contentType(MediaType.parseMediaType(document.getContentType()))
                 .contentLength(document.getSize())
                 .body(document.getContent());
@@ -64,18 +59,4 @@ public class DocumentController {
         return ResponseEntity.ok(Map.of("message", "Pong! Server is running"));
     }
 
-    /**
-     * @PostMapping("/folder") public ResponseEntity<Map<String, String>> setUserFolder(@RequestBody FolderPathDTO request) {
-     * <p>
-     * String username = getCurrentUsername();
-     * folderScannerService.scanUserFolder(username, request.getFolderPath());
-     * <p>
-     * return ResponseEntity.ok(Map.of("message", request.getFolderPath()));
-     * }
-     **/
-
-    // ========== Private Helpers ==========
-    private String getCurrentUsername() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
-    }
 }

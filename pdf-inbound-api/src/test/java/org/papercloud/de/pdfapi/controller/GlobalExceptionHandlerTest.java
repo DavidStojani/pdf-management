@@ -10,6 +10,7 @@ import org.papercloud.de.pdfservice.errors.InvalidDocumentException;
 import org.papercloud.de.pdfservice.errors.UserAuthenticationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.nio.file.AccessDeniedException;
 import java.util.Map;
@@ -133,6 +134,26 @@ class GlobalExceptionHandlerTest {
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
             assertThat(response.getBody()).isNotNull();
             assertThat(response.getBody()).containsEntry("error", errorMessage);
+        }
+    }
+
+    @Nested
+    @DisplayName("MaxUploadSizeExceededException handling")
+    class MaxUploadSizeExceededExceptionTests {
+
+        @Test
+        @DisplayName("should return 413 PAYLOAD_TOO_LARGE with error message")
+        void handleMaxUploadSize_shouldReturnPayloadTooLarge() {
+            // Arrange
+            MaxUploadSizeExceededException exception = new MaxUploadSizeExceededException(10485760L);
+
+            // Act
+            ResponseEntity<Map<String, String>> response = exceptionHandler.handleMaxUploadSize(exception);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().get("error")).contains("10MB");
         }
     }
 
