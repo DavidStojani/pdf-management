@@ -17,16 +17,19 @@ import org.papercloud.de.pdfsecurity.service.VerificationJWTService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -37,11 +40,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Tests authentication endpoints including registration, login, email verification, and password reset.
  */
 @WebMvcTest(controllers = AuthController.class,
+        properties = "spring.main.allow-bean-definition-overriding=true",
+        excludeFilters = {
+                @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = DocumentController.class)
+        },
         excludeAutoConfiguration = {
                 org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration.class,
                 org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration.class
         })
 @AutoConfigureMockMvc(addFilters = false)
+@Import(AuthControllerTest.TestStubs.class)
+@ContextConfiguration(classes = {AuthController.class, GlobalExceptionHandler.class, AuthControllerTest.TestStubs.class})
 @DisplayName("AuthController Integration Tests")
 class AuthControllerTest {
 
@@ -51,14 +60,14 @@ class AuthControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
-    private AuthenticationService authenticationService;
+    @Autowired
+    private StubAuthenticationService authenticationService;
 
-    @MockBean
-    private PasswordService passwordService;
+    @Autowired
+    private StubPasswordService passwordService;
 
-    @MockBean
-    private VerificationJWTService verificationService;
+    @Autowired
+    private StubVerificationJWTService verificationService;
 
     private AuthResponse sampleAuthResponse;
 
@@ -72,6 +81,10 @@ class AuthControllerTest {
                 .userId(1L)
                 .roles(new String[]{"ROLE_USER"})
                 .build();
+
+        authenticationService.reset();
+        passwordService.reset();
+        verificationService.reset();
     }
 
     @Nested
@@ -81,17 +94,14 @@ class AuthControllerTest {
         @Test
         @DisplayName("should successfully register new user with valid credentials")
         void register_validCredentials_returnsAuthResponse() throws Exception {
-            // Arrange
             RegisterRequest request = new RegisterRequest();
             request.setUsername("newuser");
             request.setEmail("newuser@example.com");
             request.setPassword("SecurePass123!");
             request.setConfirmPassword("SecurePass123!");
 
-            when(authenticationService.register(any(RegisterRequest.class)))
-                    .thenReturn(sampleAuthResponse);
+            authenticationService.nextRegisterResponse.set(sampleAuthResponse);
 
-            // Act & Assert
             mockMvc.perform(post("/api/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -102,23 +112,20 @@ class AuthControllerTest {
                     .andExpect(jsonPath("$.userId").value(1))
                     .andExpect(jsonPath("$.roles[0]").value("ROLE_USER"));
 
-            verify(authenticationService).register(any(RegisterRequest.class));
+            assertThat(authenticationService.lastRegisterRequest.get()).isNotNull();
         }
 
         @Test
         @DisplayName("should handle registration with minimum valid data")
         void register_minimumValidData_processesSuccessfully() throws Exception {
-            // Arrange
             RegisterRequest request = new RegisterRequest();
             request.setUsername("user");
             request.setEmail("u@example.com");
             request.setPassword("pass");
             request.setConfirmPassword("pass");
 
-            when(authenticationService.register(any(RegisterRequest.class)))
-                    .thenReturn(sampleAuthResponse);
+            authenticationService.nextRegisterResponse.set(sampleAuthResponse);
 
-            // Act & Assert
             mockMvc.perform(post("/api/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -129,7 +136,6 @@ class AuthControllerTest {
         @Test
         @DisplayName("should handle registration with special characters in username")
         void register_specialCharactersInUsername_processesRequest() throws Exception {
-            // Arrange
             RegisterRequest request = new RegisterRequest();
             request.setUsername("user_name-123");
             request.setEmail("user@example.com");
@@ -140,11 +146,8 @@ class AuthControllerTest {
                     .username("user_name-123")
                     .jwtToken("token")
                     .build();
+            authenticationService.nextRegisterResponse.set(response);
 
-            when(authenticationService.register(any(RegisterRequest.class)))
-                    .thenReturn(response);
-
-            // Act & Assert
             mockMvc.perform(post("/api/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -155,17 +158,14 @@ class AuthControllerTest {
         @Test
         @DisplayName("should handle registration error when service throws exception")
         void register_serviceException_returnsErrorStatus() throws Exception {
-            // Arrange
             RegisterRequest request = new RegisterRequest();
             request.setUsername("existinguser");
             request.setEmail("existing@example.com");
             request.setPassword("password");
             request.setConfirmPassword("password");
 
-            when(authenticationService.register(any(RegisterRequest.class)))
-                    .thenThrow(new RuntimeException("Username already exists"));
+            authenticationService.nextRegisterError.set(new RuntimeException("Username already exists"));
 
-            // Act & Assert
             mockMvc.perform(post("/api/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -180,15 +180,12 @@ class AuthControllerTest {
         @Test
         @DisplayName("should successfully login with valid credentials")
         void login_validCredentials_returnsAuthResponse() throws Exception {
-            // Arrange
             LoginRequest request = new LoginRequest();
             request.setUsername("testuser");
             request.setPassword("password123");
 
-            when(authenticationService.login(any(LoginRequest.class)))
-                    .thenReturn(sampleAuthResponse);
+            authenticationService.nextLoginResponse.set(sampleAuthResponse);
 
-            // Act & Assert
             mockMvc.perform(post("/api/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -197,13 +194,12 @@ class AuthControllerTest {
                     .andExpect(jsonPath("$.refreshToken").exists())
                     .andExpect(jsonPath("$.username").value("testuser"));
 
-            verify(authenticationService).login(any(LoginRequest.class));
+            assertThat(authenticationService.lastLoginRequest.get()).isNotNull();
         }
 
         @Test
         @DisplayName("should return auth response with all fields populated")
         void login_successfulLogin_returnsCompleteAuthResponse() throws Exception {
-            // Arrange
             LoginRequest request = new LoginRequest();
             request.setUsername("admin");
             request.setPassword("adminpass");
@@ -216,11 +212,8 @@ class AuthControllerTest {
                     .userId(100L)
                     .roles(new String[]{"ROLE_ADMIN", "ROLE_USER"})
                     .build();
+            authenticationService.nextLoginResponse.set(adminResponse);
 
-            when(authenticationService.login(any(LoginRequest.class)))
-                    .thenReturn(adminResponse);
-
-            // Act & Assert
             mockMvc.perform(post("/api/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -233,15 +226,12 @@ class AuthControllerTest {
         @Test
         @DisplayName("should handle login failure with invalid credentials")
         void login_invalidCredentials_returnsErrorStatus() throws Exception {
-            // Arrange
             LoginRequest request = new LoginRequest();
             request.setUsername("wronguser");
             request.setPassword("wrongpass");
 
-            when(authenticationService.login(any(LoginRequest.class)))
-                    .thenThrow(new RuntimeException("Invalid credentials"));
+            authenticationService.nextLoginError.set(new RuntimeException("Invalid credentials"));
 
-            // Act & Assert
             mockMvc.perform(post("/api/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -251,15 +241,12 @@ class AuthControllerTest {
         @Test
         @DisplayName("should handle login with empty username")
         void login_emptyUsername_processesRequest() throws Exception {
-            // Arrange
             LoginRequest request = new LoginRequest();
             request.setUsername("");
             request.setPassword("password");
 
-            when(authenticationService.login(any(LoginRequest.class)))
-                    .thenThrow(new RuntimeException("Username cannot be empty"));
+            authenticationService.nextLoginError.set(new RuntimeException("Username cannot be empty"));
 
-            // Act & Assert
             mockMvc.perform(post("/api/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -274,28 +261,22 @@ class AuthControllerTest {
         @Test
         @DisplayName("should successfully verify email with valid token")
         void verifyEmail_validToken_returnsSuccessMessage() throws Exception {
-            // Arrange
             String token = "valid-verification-token-123";
-            doNothing().when(verificationService).verifyEmail(token);
 
-            // Act & Assert
             mockMvc.perform(get("/api/auth/verify-email")
                             .param("token", token))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.message").value("Email verified successfully"));
 
-            verify(verificationService).verifyEmail(token);
+            assertThat(verificationService.lastVerifiedToken.get()).isEqualTo(token);
         }
 
         @Test
         @DisplayName("should handle verification with invalid token")
         void verifyEmail_invalidToken_returnsErrorStatus() throws Exception {
-            // Arrange
             String token = "invalid-token";
-            doThrow(new RuntimeException("Invalid or expired token"))
-                    .when(verificationService).verifyEmail(token);
+            verificationService.nextVerifyError.set(new RuntimeException("Invalid or expired token"));
 
-            // Act & Assert
             mockMvc.perform(get("/api/auth/verify-email")
                             .param("token", token))
                     .andExpect(status().is5xxServerError());
@@ -304,11 +285,8 @@ class AuthControllerTest {
         @Test
         @DisplayName("should handle verification with empty token")
         void verifyEmail_emptyToken_processesRequest() throws Exception {
-            // Arrange
-            doThrow(new RuntimeException("Token cannot be empty"))
-                    .when(verificationService).verifyEmail("");
+            verificationService.nextVerifyError.set(new RuntimeException("Token cannot be empty"));
 
-            // Act & Assert
             mockMvc.perform(get("/api/auth/verify-email")
                             .param("token", ""))
                     .andExpect(status().is5xxServerError());
@@ -317,33 +295,26 @@ class AuthControllerTest {
         @Test
         @DisplayName("should successfully resend verification email")
         void resendVerification_validEmail_returnsSuccessMessage() throws Exception {
-            // Arrange
             EmailVerificationRequest request = new EmailVerificationRequest();
             request.setEmail("testuser@example.com");
 
-            doNothing().when(verificationService).resendVerificationEmail(request.getEmail());
-
-            // Act & Assert
             mockMvc.perform(post("/api/auth/resend-verification")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.message").value("Verification email sent"));
 
-            verify(verificationService).resendVerificationEmail(request.getEmail());
+            assertThat(verificationService.lastResentEmail.get()).isEqualTo(request.getEmail());
         }
 
         @Test
         @DisplayName("should handle resend verification for non-existent email")
         void resendVerification_nonExistentEmail_returnsErrorStatus() throws Exception {
-            // Arrange
             EmailVerificationRequest request = new EmailVerificationRequest();
             request.setEmail("nonexistent@example.com");
 
-            doThrow(new RuntimeException("Email not found"))
-                    .when(verificationService).resendVerificationEmail(request.getEmail());
+            verificationService.nextResendError.set(new RuntimeException("Email not found"));
 
-            // Act & Assert
             mockMvc.perform(post("/api/auth/resend-verification")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -358,32 +329,24 @@ class AuthControllerTest {
         @Test
         @DisplayName("should successfully request password reset")
         void requestPasswordReset_validEmail_returnsSuccessMessage() throws Exception {
-            // Arrange
             PasswordResetRequest request = new PasswordResetRequest();
             request.setEmail("testuser@example.com");
 
-            doNothing().when(passwordService).initiatePasswordReset(request.getEmail());
-
-            // Act & Assert
             mockMvc.perform(post("/api/auth/password-reset-request")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.message").value("Password reset email sent"));
 
-            verify(passwordService).initiatePasswordReset(request.getEmail());
+            assertThat(passwordService.lastResetRequestEmail.get()).isEqualTo(request.getEmail());
         }
 
         @Test
         @DisplayName("should handle password reset request for non-existent email")
         void requestPasswordReset_nonExistentEmail_returnsSuccessMessage() throws Exception {
-            // Arrange - Security best practice: don't reveal if email exists
             PasswordResetRequest request = new PasswordResetRequest();
             request.setEmail("nonexistent@example.com");
 
-            doNothing().when(passwordService).initiatePasswordReset(request.getEmail());
-
-            // Act & Assert
             mockMvc.perform(post("/api/auth/password-reset-request")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -394,49 +357,32 @@ class AuthControllerTest {
         @Test
         @DisplayName("should successfully reset password with valid token")
         void resetPassword_validTokenAndPassword_returnsSuccessMessage() throws Exception {
-            // Arrange
             PasswordChangeRequest request = new PasswordChangeRequest();
             request.setToken("valid-reset-token");
             request.setNewPassword("NewSecurePass123!");
             request.setConfirmPassword("NewSecurePass123!");
 
-            doNothing().when(passwordService).resetPassword(
-                    eq(request.getToken()),
-                    eq(request.getNewPassword()),
-                    eq(request.getConfirmPassword())
-            );
-
-            // Act & Assert
             mockMvc.perform(post("/api/auth/password-reset")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.message").value("Password reset successful"));
 
-            verify(passwordService).resetPassword(
-                    request.getToken(),
-                    request.getNewPassword(),
-                    request.getConfirmPassword()
-            );
+            assertThat(passwordService.lastResetToken.get()).isEqualTo(request.getToken());
+            assertThat(passwordService.lastResetNewPassword.get()).isEqualTo(request.getNewPassword());
+            assertThat(passwordService.lastResetConfirmPassword.get()).isEqualTo(request.getConfirmPassword());
         }
 
         @Test
         @DisplayName("should handle password reset with invalid token")
         void resetPassword_invalidToken_returnsErrorStatus() throws Exception {
-            // Arrange
             PasswordChangeRequest request = new PasswordChangeRequest();
             request.setToken("invalid-token");
             request.setNewPassword("NewPassword123");
             request.setConfirmPassword("NewPassword123");
 
-            doThrow(new RuntimeException("Invalid or expired token"))
-                    .when(passwordService).resetPassword(
-                            eq(request.getToken()),
-                            eq(request.getNewPassword()),
-                            eq(request.getConfirmPassword())
-                    );
+            passwordService.nextResetError.set(new RuntimeException("Invalid or expired token"));
 
-            // Act & Assert
             mockMvc.perform(post("/api/auth/password-reset")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -446,20 +392,13 @@ class AuthControllerTest {
         @Test
         @DisplayName("should handle password reset with mismatched passwords")
         void resetPassword_mismatchedPasswords_returnsErrorStatus() throws Exception {
-            // Arrange
             PasswordChangeRequest request = new PasswordChangeRequest();
             request.setToken("valid-token");
             request.setNewPassword("Password123");
             request.setConfirmPassword("DifferentPassword123");
 
-            doThrow(new RuntimeException("Passwords do not match"))
-                    .when(passwordService).resetPassword(
-                            eq(request.getToken()),
-                            eq(request.getNewPassword()),
-                            eq(request.getConfirmPassword())
-                    );
+            passwordService.nextResetError.set(new RuntimeException("Passwords do not match"));
 
-            // Act & Assert
             mockMvc.perform(post("/api/auth/password-reset")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -469,24 +408,139 @@ class AuthControllerTest {
         @Test
         @DisplayName("should handle password reset with weak password")
         void resetPassword_weakPassword_returnsErrorStatus() throws Exception {
-            // Arrange
             PasswordChangeRequest request = new PasswordChangeRequest();
             request.setToken("valid-token");
             request.setNewPassword("123");
             request.setConfirmPassword("123");
 
-            doThrow(new RuntimeException("Password does not meet security requirements"))
-                    .when(passwordService).resetPassword(
-                            eq(request.getToken()),
-                            eq(request.getNewPassword()),
-                            eq(request.getConfirmPassword())
-                    );
+            passwordService.nextResetError.set(new RuntimeException("Password does not meet security requirements"));
 
-            // Act & Assert
             mockMvc.perform(post("/api/auth/password-reset")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().is5xxServerError());
+        }
+    }
+
+    @TestConfiguration
+    static class TestStubs {
+        @Bean
+        @Primary
+        StubAuthenticationService authenticationService() {
+            return new StubAuthenticationService();
+        }
+
+        @Bean
+        @Primary
+        StubPasswordService passwordService() {
+            return new StubPasswordService();
+        }
+
+        @Bean
+        @Primary
+        StubVerificationJWTService verificationService() {
+            return new StubVerificationJWTService();
+        }
+    }
+
+    static final class StubAuthenticationService implements AuthenticationService {
+        final AtomicReference<RegisterRequest> lastRegisterRequest = new AtomicReference<>();
+        final AtomicReference<LoginRequest> lastLoginRequest = new AtomicReference<>();
+        final AtomicReference<AuthResponse> nextRegisterResponse = new AtomicReference<>();
+        final AtomicReference<AuthResponse> nextLoginResponse = new AtomicReference<>();
+        final AtomicReference<RuntimeException> nextRegisterError = new AtomicReference<>();
+        final AtomicReference<RuntimeException> nextLoginError = new AtomicReference<>();
+
+        @Override
+        public AuthResponse register(RegisterRequest request) {
+            lastRegisterRequest.set(request);
+            if (nextRegisterError.get() != null) {
+                throw nextRegisterError.get();
+            }
+            return nextRegisterResponse.get();
+        }
+
+        @Override
+        public AuthResponse login(LoginRequest request) {
+            lastLoginRequest.set(request);
+            if (nextLoginError.get() != null) {
+                throw nextLoginError.get();
+            }
+            return nextLoginResponse.get();
+        }
+
+        void reset() {
+            lastRegisterRequest.set(null);
+            lastLoginRequest.set(null);
+            nextRegisterResponse.set(null);
+            nextLoginResponse.set(null);
+            nextRegisterError.set(null);
+            nextLoginError.set(null);
+        }
+    }
+
+    static final class StubPasswordService implements PasswordService {
+        final AtomicReference<String> lastResetRequestEmail = new AtomicReference<>();
+        final AtomicReference<String> lastResetToken = new AtomicReference<>();
+        final AtomicReference<String> lastResetNewPassword = new AtomicReference<>();
+        final AtomicReference<String> lastResetConfirmPassword = new AtomicReference<>();
+        final AtomicReference<RuntimeException> nextResetError = new AtomicReference<>();
+
+        @Override
+        public void initiatePasswordReset(String email) {
+            lastResetRequestEmail.set(email);
+        }
+
+        @Override
+        public void resetPassword(String token, String newPassword, String confirmPassword) {
+            if (nextResetError.get() != null) {
+                throw nextResetError.get();
+            }
+            lastResetToken.set(token);
+            lastResetNewPassword.set(newPassword);
+            lastResetConfirmPassword.set(confirmPassword);
+        }
+
+        void reset() {
+            lastResetRequestEmail.set(null);
+            lastResetToken.set(null);
+            lastResetNewPassword.set(null);
+            lastResetConfirmPassword.set(null);
+            nextResetError.set(null);
+        }
+    }
+
+    static final class StubVerificationJWTService extends VerificationJWTService {
+        final AtomicReference<String> lastVerifiedToken = new AtomicReference<>();
+        final AtomicReference<String> lastResentEmail = new AtomicReference<>();
+        final AtomicReference<RuntimeException> nextVerifyError = new AtomicReference<>();
+        final AtomicReference<RuntimeException> nextResendError = new AtomicReference<>();
+
+        StubVerificationJWTService() {
+            super(null, null, null);
+        }
+
+        @Override
+        public void verifyEmail(String token) {
+            if (nextVerifyError.get() != null) {
+                throw nextVerifyError.get();
+            }
+            lastVerifiedToken.set(token);
+        }
+
+        @Override
+        public void resendVerificationEmail(String email) {
+            if (nextResendError.get() != null) {
+                throw nextResendError.get();
+            }
+            lastResentEmail.set(email);
+        }
+
+        void reset() {
+            lastVerifiedToken.set(null);
+            lastResentEmail.set(null);
+            nextVerifyError.set(null);
+            nextResendError.set(null);
         }
     }
 }

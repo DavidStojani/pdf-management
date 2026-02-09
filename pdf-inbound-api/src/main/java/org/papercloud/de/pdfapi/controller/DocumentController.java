@@ -2,14 +2,9 @@ package org.papercloud.de.pdfapi.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
-import java.nio.file.AccessDeniedException;
-import java.util.Map;
-
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.core.dto.document.DocumentDTO;
 import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
-import org.papercloud.de.core.dto.document.FolderPathDTO;
 import org.papercloud.de.pdfservice.service.DocumentService;
 import org.papercloud.de.pdfservice.textutils.FolderScannerService;
 import org.slf4j.Logger;
@@ -18,10 +13,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.nio.file.AccessDeniedException;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -66,18 +64,17 @@ public class DocumentController {
         return ResponseEntity.ok(Map.of("message", "Pong! Server is running"));
     }
 
-    @PostMapping("/folder")
-    public ResponseEntity<Map<String, String>> setUserFolder(@RequestBody FolderPathDTO request) {
-
-        String username = getCurrentUsername();
-        folderScannerService.scanUserFolder(username, request.getFolderPath());
-
-        return ResponseEntity.ok(Map.of("message", request.getFolderPath()));
-    }
-
+    /**
+     * @PostMapping("/folder") public ResponseEntity<Map<String, String>> setUserFolder(@RequestBody FolderPathDTO request) {
+     * <p>
+     * String username = getCurrentUsername();
+     * folderScannerService.scanUserFolder(username, request.getFolderPath());
+     * <p>
+     * return ResponseEntity.ok(Map.of("message", request.getFolderPath()));
+     * }
+     **/
 
     // ========== Private Helpers ==========
-
     private String getCurrentUsername() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
