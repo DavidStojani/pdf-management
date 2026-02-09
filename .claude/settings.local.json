@@ -4,7 +4,9 @@
       "Bash(java -version:*)",
       "Bash(git mv:*)",
       "Bash(ls:*)",
-      "Bash(mvn compile:*)"
+      "Bash(mvn compile:*)",
+      "Bash(mvn test:*)",
+      "Bash(mvn install:*)"
     ]
   }
 }
