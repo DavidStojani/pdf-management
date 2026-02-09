@@ -2,6 +2,7 @@ package org.papercloud.de.pdfdatabase.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcType;
 import org.papercloud.de.core.domain.Document;
 import org.papercloud.de.pdfdatabase.config.EncryptedByteArrayConverter;
 
@@ -34,6 +35,7 @@ public class DocumentPdfEntity {
   private Document.Status status;
 
   @Lob
+  @JdbcType(org.hibernate.type.descriptor.jdbc.VarbinaryJdbcType.class)
   @Column(name = "pdf_content")
   @Convert(converter = EncryptedByteArrayConverter.class)
   private byte[] pdfContent;

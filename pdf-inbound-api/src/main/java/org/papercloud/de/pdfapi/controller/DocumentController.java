@@ -42,7 +42,7 @@ public class DocumentController {
 
     @Operation(summary = "Download a PDF document")
     @GetMapping("/{id}/download")
-    public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id, Authentication authentication) throws AccessDeniedException {
+    public ResponseEntity<byte[]> downloadDocument(@PathVariable("id") Long id, Authentication authentication) throws AccessDeniedException {
         DocumentDownloadDTO document = documentService.downloadDocument(authentication.getName(), id);
         String sanitizedFileName = document.getFileName().replaceAll("[^a-zA-Z0-9.\\-_ ()\\[\\]]", "_");
 
