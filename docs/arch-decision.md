@@ -166,3 +166,11 @@ Summary:
 - `docker-compose-dev.yml` is now the single dev app compose file and runs the API in a Maven-based dev container for hot reload.
 - The dev container mounts the whole repo and uses Spring DevTools + `spring-boot:run` for live restart.
 - Infrastructure services remain in `docker-compose-infra.yml` and are started separately.
+---
+# 2026-02-10 Dev Hot Reload Notes
+
+Summary:
+- The Spring Boot app runs inside the dev container, so DevTools only restarts on class changes inside the container.
+- Compiling in IntelliJ on the host does not reliably trigger reloads.
+- To trigger reloads, run Maven compile inside the container for the changed module, for example:
+  `docker exec -it springboot-app-dev mvn -f pom.xml -pl pdf-outbound-llm -am -DskipTests compile`

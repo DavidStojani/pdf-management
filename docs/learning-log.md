@@ -12,3 +12,18 @@
 
 - TODO to practice:
   - Standardize Spring profile usage in tests (`@ActiveProfiles("test")` vs `@TestPropertySource`).
+## 2026-02-10
+- [Docker] For fast dev, run a prebuilt JAR in `docker-compose-dev.yml` instead of Maven-in-container.
+- [Spring] CORS must explicitly allow frontend origins when UI runs on a different port.
+- [Auth] Frontend must store `jwtToken` (not `token`) to avoid invalid JWT parsing.
+- [Web] Iframe previews can’t send auth headers; either allow token query params or use blob fetch with headers.
+
+- Pitfalls:
+  - JWT in URL + `X-Frame-Options` disabled is convenient but weakens security.
+  - Frontend calling protected endpoints before login causes 401s.
+
+- Patterns to reuse:
+  - Add minimal stub endpoints to avoid frontend breakage while backend features are built.
+
+- TODO to practice:
+  - Implement favourites with a proper persistence model and API.
