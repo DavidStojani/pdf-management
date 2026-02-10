@@ -61,20 +61,22 @@ public class AuthenticationJWTServiceImpl implements AuthenticationService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         // Validate request
-        if (!request.getPassword().equals(request.getConfirmPassword())) {
+        if (request.getPassword() == null || request.getConfirmPassword() == null ||
+                !request.getPassword().equals(request.getConfirmPassword())) {
             throw new IllegalArgumentException("Passwords don't match");
         }
 
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-            throw new IllegalArgumentException("Username already exists");
-        }
+        //Todo Change the UI for this
+//        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+//            throw new IllegalArgumentException("Username already exists");
+//        }
 
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email already exists");
         }
 
         // Create new user
-        UserEntity user = UserEntity.builder().username(request.getUsername())
+        UserEntity user = UserEntity.builder().username(request.getEmail())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .enabled(true)
@@ -111,7 +113,7 @@ public class AuthenticationJWTServiceImpl implements AuthenticationService {
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
+                        request.getEmail(),
                         request.getPassword()
                 )
         );
@@ -119,7 +121,7 @@ public class AuthenticationJWTServiceImpl implements AuthenticationService {
         org.springframework.security.core.userdetails.User principal =
                 (org.springframework.security.core.userdetails.User) authentication.getPrincipal();
 
-        UserEntity user = userRepository.findByUsername(principal.getUsername())
+        UserEntity user = userRepository.findByEmail(principal.getUsername())
                 .orElseThrow(() -> new BadCredentialsException("User not found"));
 
         // Update last login time
