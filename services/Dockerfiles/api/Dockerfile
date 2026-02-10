@@ -11,8 +11,8 @@ RUN apt-get update && \
 WORKDIR /app
 
 # Copy the built jar
-ARG JAR_FILE=pdf-inbound-api/target/pdf-inbound-api-1.0-SNAPSHOT.jar
-COPY ${JAR_FILE} app.jar
+#ARG JAR_FILE=pdf-inbound-api/target/pdf-inbound-api-1.0-SNAPSHOT.jar
+#COPY ${JAR_FILE} app.jar
 
 # Expose ports for the application and debugger
 EXPOSE 8080 5005

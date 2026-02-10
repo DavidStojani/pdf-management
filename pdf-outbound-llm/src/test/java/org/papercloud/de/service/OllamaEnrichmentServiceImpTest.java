@@ -108,7 +108,7 @@ class OllamaEnrichmentServiceImpTest {
         void should_buildCorrectPrompt_when_enriching() {
             // Arrange
             String plainText = "Document content";
-            String expectedPrompt = "Give me a json-format with title, date_sent as dd.MM.yyyy and 5 tags for this text: \"Document content\"";
+            String expectedPrompt = "Give me a json-format with title, date_sent with Format DD.MM.YYYY and 5 tags for this text: \"Document content\"";
 
             when(webClient.post()).thenReturn(requestBodyUriSpec);
             when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);

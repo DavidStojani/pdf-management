@@ -16,8 +16,9 @@ services:
     networks:
       - backend
     volumes:
+      - ./pdf-inbound-api/target/pdf-inbound-api-1.0-SNAPSHOT.jar:/app/app.jar
       - /home/stojani/Downloads:/mnt/Downloads
-
+    command: ["java", "-jar", "app.jar"]
 networks:
   backend:
     external: true
