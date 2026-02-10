@@ -39,19 +39,19 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
 
     @Override
     public void enrichDocument(Long documentId) throws Exception {
+
         log.info("Starting document enrichment process for document ID: {}", documentId);
-//        documentStatusService.updateStatus(documentId, Document.Status.ENRICHMENT_IN_PROGRESS);
         long startTime = System.nanoTime();
 
         try {
             String cleanedText = prepareForEnrichment(documentId);
 
+            log.info("Cleaned text for document : {}", cleanedText);
             EnrichmentResultDTO result = enrichmentService.enrichTextAsync(cleanedText)
                     .block(Duration.ofSeconds(60));
             if (result == null) {
                 documentStatusService.updateStatus(documentId, Document.Status.ENRICHMENT_ERROR);
             }
-
 
             saveEnrichmentResult(documentId, result);
             log.info("Successfully completed enrichment for document ID: {}", documentId);
@@ -79,6 +79,7 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
                 .map(PagesPdfEntity::getPageText)
                 .toList();
         validatePageTexts(pageTexts);
+
         return cleanFirstPageText(pageTexts);
     }
 
@@ -88,7 +89,6 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
         document.setTitle(enrichmentResult.getTitle());
         document.setDateOnDocument(parseDocumentDate(enrichmentResult.getDate_sent()));
         document.setTags(enrichmentResult.getTagNames());
-        document.setFailedEnrichment(enrichmentResult.isFlagFailedEnrichment());
         document.setStatus(Document.Status.ENRICHMENT_COMPLETED);
         documentRepository.save(document);
     }
@@ -112,7 +112,7 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
 
     private String cleanFirstPageText(List<String> pageTexts) {
         // validatePageTexts already ensures index 0 exists
-        return textCleaningService.cleanOcrText(pageTexts.get(0));
+        return textCleaningService.cleanOcrText(pageTexts.getFirst());
     }
 
 

@@ -24,7 +24,7 @@ public class OllamaEnrichmentServiceImp implements EnrichmentService {
 
     private static final String MODEL_NAME = "qwen2.5:0.5b";
     private static final String PROMPT_TEMPLATE =
-            "Give me a json-format with title, date_sent as dd.MM.yyyy and 5 tags for this text: \"%s\"";
+            "Give me a json-format with title, date_sent with Fomat DD.MM.YYYY and 5 tags for this text: \"%s\"";
     private static final Duration OLLAMA_TIMEOUT = Duration.ofMinutes(10);
 
     private final WebClient webClient;
@@ -39,6 +39,7 @@ public class OllamaEnrichmentServiceImp implements EnrichmentService {
                 // ignore null / blank body
                 .filter(responseBody -> responseBody != null && !responseBody.isBlank())
                 .flatMap(this::mapResponseToEnrichmentResult)
+                .doOnSuccess(response -> log.info("OLLAMA response: {}", response))
                 // no Body (404 etc.) → fallback
                 .switchIfEmpty(Mono.just(getFallbackResult()))
                 // absolutely any unexpected error → fallback

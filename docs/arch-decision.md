@@ -159,3 +159,10 @@ class DocumentServiceTest {
     @InjectMocks DocumentServiceImpl service;
 }
 ```
+---
+# 2026-02-10 Dev Docker Workflow Consolidation
+
+Summary:
+- `docker-compose-dev.yml` is now the single dev app compose file and runs the API in a Maven-based dev container for hot reload.
+- The dev container mounts the whole repo and uses Spring DevTools + `spring-boot:run` for live restart.
+- Infrastructure services remain in `docker-compose-infra.yml` and are started separately.

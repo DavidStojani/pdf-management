@@ -1,10 +1,8 @@
-version: "3.9"
-
 services:
   springboot-app:
     build:
       context: .
-      dockerfile: services/Dockerfiles/api/Dockerfile
+      dockerfile: services/Dockerfiles/api/Dockerfile.dev
     container_name: springboot-app-dev
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pdf_management
@@ -19,10 +17,19 @@ services:
       - backend
     volumes:
       - /home/stojani/Downloads:/mnt/Downloads
-      # Mount the compiled classes for hot reload
-      - ./target/classes:/app/classes
-    command: java -cp /app/classes:/app/lib/* org/papercloud/de/pdfapi/PdfApiApplication.java
+      - ./:/workspace
+      - maven-repo:/root/.m2
+    working_dir: /workspace
+    command: >
+      bash -lc
+      "mvn -f pom.xml -pl pdf-inbound-api -am -DskipTests install
+      && mvn -f pdf-inbound-api/pom.xml spring-boot:run
+      -Dspring-boot.run.profiles=dev
+      -Dspring-boot.run.jvmArguments='-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'"
 
 networks:
   backend:
     external: true
+
+volumes:
+  maven-repo:

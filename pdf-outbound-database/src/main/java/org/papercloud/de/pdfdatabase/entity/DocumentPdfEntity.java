@@ -34,7 +34,6 @@ public class DocumentPdfEntity {
   @Enumerated(EnumType.STRING)
   private Document.Status status;
 
-  @Lob
   @JdbcType(org.hibernate.type.descriptor.jdbc.VarbinaryJdbcType.class)
   @Column(name = "pdf_content")
   @Convert(converter = EncryptedByteArrayConverter.class)

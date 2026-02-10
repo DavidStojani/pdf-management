@@ -18,7 +18,7 @@ A modular Spring Boot application for ingesting, processing, and searching PDF d
 4. **Download** – `DocumentServiceImpl.downloadDocument` enforces ownership and streams the stored PDF bytes back to the caller.
 
 ## Running locally
-1. **Prerequisites** – Java 21, Maven 3.9+, and Docker if you want optional infrastructure (databases/search) via `docker-compose.yml`.
+1. **Prerequisites** – Java 21, Maven 3.9+, and Docker if you want optional infrastructure (databases/search) via `docker-compose-infra.yml`.
 2. **Build** – From the repo root, run `mvn clean package` to compile all modules. (If Maven Central access is restricted, configure a mirror or local cache.)
 3. **Start services** – Launch dependencies with `docker compose up -d` and then run `pdf-api` with `mvn spring-boot:run -pl pdf-api` to expose REST endpoints on port 8080.
 4. **Upload & process** – POST to `/api/documents/upload` with a PDF file; OCR and enrichment run asynchronously once the upload is accepted.
