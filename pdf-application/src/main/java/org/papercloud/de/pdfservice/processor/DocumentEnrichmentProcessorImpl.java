@@ -112,7 +112,7 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
 
     private String cleanFirstPageText(List<String> pageTexts) {
         // validatePageTexts already ensures index 0 exists
-        return textCleaningService.cleanOcrText(pageTexts.getFirst());
+        return textCleaningService.cleanOcrText(pageTexts.get(0));
     }
 
 

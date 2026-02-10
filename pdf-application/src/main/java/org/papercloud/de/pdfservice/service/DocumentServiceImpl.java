@@ -5,6 +5,7 @@ import org.papercloud.de.core.domain.Document;
 import org.papercloud.de.core.dto.document.DocumentDTO;
 import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.core.dto.document.DocumentUploadDTO;
+import org.papercloud.de.core.dto.document.DocumentListItemDTO;
 import org.papercloud.de.core.events.OcrEvent;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
@@ -28,6 +29,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -87,6 +91,29 @@ public class DocumentServiceImpl implements DocumentService {
         return documentMapper.toDownloadDTO(document);
     }
 
+    @Override
+    public List<DocumentListItemDTO> searchDocuments(String username, String query) {
+        List<DocumentPdfEntity> documents = documentRepository.findByOwnerUsername(username);
+        if (query == null || query.isBlank()) {
+            return mapToListItems(documents);
+        }
+        String q = query.toLowerCase(Locale.ROOT);
+        List<DocumentPdfEntity> filtered = documents.stream()
+                .filter(doc -> {
+                    String title = doc.getTitle();
+                    String filename = doc.getFilename();
+                    return (title != null && title.toLowerCase(Locale.ROOT).contains(q))
+                            || (filename != null && filename.toLowerCase(Locale.ROOT).contains(q));
+                })
+                .collect(Collectors.toList());
+        return mapToListItems(filtered);
+    }
+
+    @Override
+    public List<DocumentListItemDTO> getFavourites(String username) {
+        return List.of();
+    }
+
 
     // 🔽 --- Private Helper Methods --- 🔽
 
@@ -119,6 +146,16 @@ public class DocumentServiceImpl implements DocumentService {
     private DocumentPdfEntity getDocumentOrThrow(Long id) {
         return documentRepository.findById(id)
                 .orElseThrow(() -> new DocumentNotFoundException("Document not found with id: " + id));
+    }
+
+    private List<DocumentListItemDTO> mapToListItems(List<DocumentPdfEntity> documents) {
+        return documents.stream()
+                .map(doc -> DocumentListItemDTO.builder()
+                        .id(doc.getId())
+                        .title(doc.getTitle() != null ? doc.getTitle() : doc.getFilename())
+                        .isFavourite(false)
+                        .build())
+                .collect(Collectors.toList());
     }
 
     private Authentication resolveAuthentication(Authentication authentication) {

@@ -7,6 +7,7 @@ import java.nio.file.AccessDeniedException;
 import org.papercloud.de.core.dto.document.DocumentDTO;
 import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.core.dto.document.DocumentUploadDTO;
+import org.papercloud.de.core.dto.document.DocumentListItemDTO;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,4 +18,8 @@ public interface DocumentService {
   DocumentDTO processDocument(DocumentUploadDTO file, String username) throws IOException;
 
   DocumentDownloadDTO downloadDocument(String username, Long id) throws AccessDeniedException;
+
+  java.util.List<DocumentListItemDTO> searchDocuments(String username, String query);
+
+  java.util.List<DocumentListItemDTO> getFavourites(String username);
 }

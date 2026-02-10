@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.core.dto.document.DocumentDTO;
 import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
+import org.papercloud.de.core.dto.document.DocumentListItemDTO;
 import org.papercloud.de.pdfservice.service.DocumentService;
 import org.papercloud.de.pdfservice.textutils.FolderScannerService;
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.AccessDeniedException;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -40,6 +42,18 @@ public class DocumentController {
         ));
     }
 
+    @Operation(summary = "Upload images from camera (stub)")
+    @PostMapping("/upload/camera")
+    public ResponseEntity<Map<String, String>> uploadCameraImages(
+            @RequestParam("files[]") List<MultipartFile> files,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(Map.of(
+                "message", "Camera upload accepted",
+                "count", String.valueOf(files.size())
+        ));
+    }
+
     @Operation(summary = "Download a PDF document")
     @GetMapping("/{id}/download")
     public ResponseEntity<byte[]> downloadDocument(@PathVariable("id") Long id, Authentication authentication) throws AccessDeniedException {
@@ -51,6 +65,33 @@ public class DocumentController {
                 .contentType(MediaType.parseMediaType(document.getContentType()))
                 .contentLength(document.getSize())
                 .body(document.getContent());
+    }
+
+    @Operation(summary = "Search documents")
+    @GetMapping("/search")
+    public ResponseEntity<List<DocumentListItemDTO>> searchDocuments(
+            @RequestParam(value = "q", required = false) String query,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(documentService.searchDocuments(authentication.getName(), query));
+    }
+
+    @Operation(summary = "List favourite documents")
+    @GetMapping("/favourites")
+    public ResponseEntity<List<DocumentListItemDTO>> getFavourites(Authentication authentication) {
+        return ResponseEntity.ok(documentService.getFavourites(authentication.getName()));
+    }
+
+    @Operation(summary = "Add document to favourites (stub)")
+    @PostMapping("/{id}/favourite")
+    public ResponseEntity<Void> addFavourite(@PathVariable("id") Long id, Authentication authentication) {
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Remove document from favourites (stub)")
+    @DeleteMapping("/{id}/favourite")
+    public ResponseEntity<Void> removeFavourite(@PathVariable("id") Long id, Authentication authentication) {
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/ping")
