@@ -1,0 +1,24 @@
+services:
+  springboot-app:
+    build:
+      context: .
+      dockerfile: services/Dockerfiles/api/Dockerfile
+    container_name: springboot-app-dev
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://192.168.2.107:5432/pdf_management
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin
+
+      # If you use Elasticsearch in Spring, add your app’s expected env/property:
+      ELASTICSEARCH_URL: http://192.168.2.107:9200
+
+      OLLAMA_BASE_URL: http://192.168.2.107:11434
+      SPRING_PROFILES_ACTIVE: dev
+    ports:
+      - "8080:8080"
+      - "5005:5005"
+    volumes:
+      - ./pdf-inbound-api/target/pdf-inbound-api-1.0-SNAPSHOT.jar:/app/app.jar
+      - /home/stojani/Downloads:/mnt/Downloads
+    command: ["java", "-jar", "app.jar"]
+    restart: unless-stopped
