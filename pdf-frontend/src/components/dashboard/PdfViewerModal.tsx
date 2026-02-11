@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ interface Props {
 
 const PdfViewerModal = ({ document: doc, onClose, onFavouriteToggle }: Props) => {
   const isMobile = useIsMobile();
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(false);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -30,6 +32,41 @@ const PdfViewerModal = ({ document: doc, onClose, onFavouriteToggle }: Props) =>
       return () => window.removeEventListener("keydown", handleKeyDown);
     }
   }, [doc, handleKeyDown]);
+
+  useEffect(() => {
+    if (!doc) {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+        setPdfUrl(null);
+      }
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingPdf(true);
+    api
+      .downloadDocument(doc.id)
+      .then((blob) => {
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        setPdfUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return url;
+        });
+      })
+      .catch((err: any) => {
+        if (!cancelled) {
+          toast.error(err.message || "Failed to load preview");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPdf(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [doc]);
 
   const handleDownload = async () => {
     if (!doc) return;
@@ -48,8 +85,6 @@ const PdfViewerModal = ({ document: doc, onClose, onFavouriteToggle }: Props) =>
   };
 
   if (!doc) return null;
-
-  const pdfUrl = api.getDownloadUrl(doc.id);
 
   const viewer = (
     <div className="flex h-full flex-col">
@@ -75,11 +110,22 @@ const PdfViewerModal = ({ document: doc, onClose, onFavouriteToggle }: Props) =>
 
       {/* PDF iframe */}
       <div className="flex-1 bg-muted">
-        <iframe
-          src={pdfUrl}
-          className="h-full w-full border-0"
-          title={doc.title}
-        />
+        {loadingPdf ? (
+          <div className="flex h-full items-center justify-center gap-2 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Loading preview…</span>
+          </div>
+        ) : pdfUrl ? (
+          <iframe
+            src={pdfUrl}
+            className="h-full w-full border-0"
+            title={doc.title}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-muted-foreground">
+            Preview unavailable
+          </div>
+        )}
       </div>
     </div>
   );
@@ -96,7 +142,10 @@ const PdfViewerModal = ({ document: doc, onClose, onFavouriteToggle }: Props) =>
 
   return (
     <Dialog open={!!doc} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="flex h-[85vh] max-w-4xl flex-col overflow-hidden p-0">
+      <DialogContent
+        showClose={false}
+        className="flex h-[85vh] max-w-4xl flex-col overflow-hidden p-0"
+      >
         {viewer}
       </DialogContent>
     </Dialog>
