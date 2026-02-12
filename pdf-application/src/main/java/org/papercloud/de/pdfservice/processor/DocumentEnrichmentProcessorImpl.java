@@ -30,6 +30,7 @@ import java.util.List;
 public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProcessor {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final Duration ENRICHMENT_TIMEOUT = Duration.ofSeconds(60);
 
     private final EnrichmentService enrichmentService;
     private final OcrTextCleaningService textCleaningService;
@@ -40,26 +41,25 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
     @Override
     public void enrichDocument(Long documentId) throws Exception {
 
-        log.info("Starting document enrichment process for document ID: {}", documentId);
+        log.info("Starting enrichment for document {}", documentId);
         long startTime = System.nanoTime();
 
         try {
             String cleanedText = prepareForEnrichment(documentId);
-
-            log.info("Cleaned text for document : {}", cleanedText);
-            EnrichmentResultDTO result = enrichmentService.enrichTextAsync(cleanedText)
-                    .block(Duration.ofSeconds(60));
-            validateEnrichmentResult(result);
+            EnrichmentResultDTO result = requestEnrichment(cleanedText, documentId);
+            if (!validateEnrichmentResult(result, documentId)) {
+                markEnrichmentFailed(documentId);
+                return;
+            }
 
             saveEnrichmentResult(documentId, result);
-            log.info("Successfully completed enrichment for document ID: {}", documentId);
+            log.info("Completed enrichment for document {}", documentId);
         } catch (Exception ex) {
-            markEnrichmentFailed(documentId, ex);
-            throw ex instanceof DocumentEnrichmentException
-                    ? ex
-                    : new DocumentEnrichmentException("Enrichment failed", ex);
+            log.error("Enrichment execution failed for document {}", documentId, ex);
+            markEnrichmentFailed(documentId);
+            throw wrapEnrichmentException(ex);
         } finally {
-            logEnrichmentDuration(startTime);
+            logEnrichmentDuration(startTime, documentId);
         }
     }
 
@@ -93,8 +93,7 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    protected void markEnrichmentFailed(Long documentId, Exception ex) {
-        log.error("Enrichment failed for document {}", documentId, ex);
+    protected void markEnrichmentFailed(Long documentId) {
         documentStatusService.updateStatus(documentId, Document.Status.ENRICHMENT_ERROR);
         DocumentPdfEntity document = getDocumentById(documentId);
         document.setFailedEnrichment(true);
@@ -117,13 +116,28 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
         return textCleaningService.cleanOcrText(pageTexts.get(0));
     }
 
-    private void validateEnrichmentResult(EnrichmentResultDTO result) {
+    private EnrichmentResultDTO requestEnrichment(String cleanedText, Long documentId) {
+        log.debug("Prepared cleaned text for document {}", documentId);
+        return enrichmentService.enrichTextAsync(cleanedText).block(ENRICHMENT_TIMEOUT);
+    }
+
+    private boolean validateEnrichmentResult(EnrichmentResultDTO result, Long documentId) {
         if (result == null) {
-            throw new DocumentEnrichmentException("Enrichment result is empty");
+            log.warn("Enrichment result is empty for document {}", documentId);
+            return false;
         }
         if (result.isFlagFailedEnrichment()) {
-            throw new DocumentEnrichmentException("Enrichment provider reported a failure");
+            log.warn("Enrichment provider reported failed result for document {}", documentId);
+            return false;
         }
+        return true;
+    }
+
+    private DocumentEnrichmentException wrapEnrichmentException(Exception ex) {
+        if (ex instanceof DocumentEnrichmentException enrichmentException) {
+            return enrichmentException;
+        }
+        return new DocumentEnrichmentException("Enrichment failed", ex);
     }
 
 
@@ -136,9 +150,9 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
         }
     }
 
-    private void logEnrichmentDuration(long startTime) {
+    private void logEnrichmentDuration(long startTime, Long documentId) {
         long endTime = System.nanoTime();
         long durationMs = (endTime - startTime) / 1_000_000;
-        log.debug("Document enrichment completed in {} ms", durationMs);
+        log.debug("Enrichment flow finished for document {} in {} ms", documentId, durationMs);
     }
 }

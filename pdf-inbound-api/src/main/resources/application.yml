@@ -34,7 +34,7 @@ jwt:
 app:
   auth:
     email-verification:
-      enabled: true
+      enabled: false
 
 tesseract:
   datapath: /usr/share/tesseract-ocr/4.00/tessdata

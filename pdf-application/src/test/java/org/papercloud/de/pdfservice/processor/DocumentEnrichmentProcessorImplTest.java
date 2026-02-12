@@ -221,8 +221,8 @@ class DocumentEnrichmentProcessorImplTest {
     class ErrorHandlingTests {
 
         @Test
-        @DisplayName("should throw exception when enrichment service returns null")
-        void should_throwException_when_enrichmentReturnsNull() {
+        @DisplayName("should return early when enrichment service returns null")
+        void should_returnEarly_when_enrichmentReturnsNull() throws Exception {
             // Arrange
             when(documentRepository.findById(1L))
                     .thenReturn(Optional.of(testDocument));
@@ -232,18 +232,17 @@ class DocumentEnrichmentProcessorImplTest {
             when(enrichmentService.enrichTextAsync(any()))
                     .thenReturn(Mono.empty());
 
-            // Act & Assert
-            assertThatThrownBy(() -> enrichmentProcessor.enrichDocument(1L))
-                    .isInstanceOf(DocumentEnrichmentException.class)
-                    .hasMessageContaining("Enrichment result is empty");
+            // Act
+            enrichmentProcessor.enrichDocument(1L);
 
+            // Assert
             verify(documentStatusService).updateStatus(1L, Document.Status.ENRICHMENT_ERROR);
             assertThat(testDocument.isFailedEnrichment()).isTrue();
         }
 
         @Test
-        @DisplayName("should throw exception when enrichment provider returns failed flag")
-        void should_throwException_when_enrichmentReturnsFailedFlag() {
+        @DisplayName("should return early when enrichment provider returns failed flag")
+        void should_returnEarly_when_enrichmentReturnsFailedFlag() throws Exception {
             // Arrange
             EnrichmentResultDTO enrichmentResult = EnrichmentResultDTO.builder()
                     .title("Unknown Title")
@@ -260,11 +259,10 @@ class DocumentEnrichmentProcessorImplTest {
             when(enrichmentService.enrichTextAsync(any()))
                     .thenReturn(Mono.just(enrichmentResult));
 
-            // Act & Assert
-            assertThatThrownBy(() -> enrichmentProcessor.enrichDocument(1L))
-                    .isInstanceOf(DocumentEnrichmentException.class)
-                    .hasMessageContaining("Enrichment provider reported a failure");
+            // Act
+            enrichmentProcessor.enrichDocument(1L);
 
+            // Assert
             verify(documentStatusService).updateStatus(1L, Document.Status.ENRICHMENT_ERROR);
             assertThat(testDocument.isFailedEnrichment()).isTrue();
         }
