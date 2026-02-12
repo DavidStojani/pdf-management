@@ -124,6 +124,7 @@ class DocumentEnrichmentProcessorImplTest {
             assertThat(savedDoc.getStatus()).isEqualTo(Document.Status.ENRICHMENT_COMPLETED);
 
             verify(documentRepository).saveAndFlush(any(DocumentPdfEntity.class));
+            verify(documentStatusService).resetEnrichmentRetry(1L);
         }
 
         @Test
@@ -236,8 +237,7 @@ class DocumentEnrichmentProcessorImplTest {
             enrichmentProcessor.enrichDocument(1L);
 
             // Assert
-            verify(documentStatusService).updateStatus(1L, Document.Status.ENRICHMENT_ERROR);
-            assertThat(testDocument.isFailedEnrichment()).isTrue();
+            verify(documentStatusService).markEnrichmentFailure(1L, "Invalid enrichment result");
         }
 
         @Test
@@ -263,12 +263,11 @@ class DocumentEnrichmentProcessorImplTest {
             enrichmentProcessor.enrichDocument(1L);
 
             // Assert
-            verify(documentStatusService).updateStatus(1L, Document.Status.ENRICHMENT_ERROR);
-            assertThat(testDocument.isFailedEnrichment()).isTrue();
+            verify(documentStatusService).markEnrichmentFailure(1L, "Invalid enrichment result");
         }
 
         @Test
-        @DisplayName("should throw exception when document status is not OCR_COMPLETED")
+        @DisplayName("should throw exception when document status is not eligible for enrichment")
         void should_throwException_when_wrongInitialStatus() {
             // Arrange
             testDocument.setStatus(Document.Status.UPLOADED);
@@ -279,10 +278,10 @@ class DocumentEnrichmentProcessorImplTest {
             // Act & Assert
             assertThatThrownBy(() -> enrichmentProcessor.enrichDocument(1L))
                     .isInstanceOf(DocumentEnrichmentException.class)
-                    .hasMessageContaining("Document status is not OCR_COMPLETED for ID: 1");
+                    .hasMessageContaining("Document status must be OCR_COMPLETED or ENRICHMENT_ERROR for ID: 1");
 
             verify(enrichmentService, never()).enrichTextAsync(any());
-            verify(documentStatusService).updateStatus(1L, Document.Status.ENRICHMENT_ERROR);
+            verify(documentStatusService).markEnrichmentFailure(1L, "Document status must be OCR_COMPLETED or ENRICHMENT_ERROR for ID: 1");
         }
 
         @Test
@@ -294,7 +293,7 @@ class DocumentEnrichmentProcessorImplTest {
 
             // Act & Assert - DocumentNotFoundException gets wrapped in DocumentEnrichmentException
             assertThatThrownBy(() -> enrichmentProcessor.enrichDocument(999L))
-                    .isInstanceOf(DocumentNotFoundException.class);
+                    .isInstanceOf(DocumentEnrichmentException.class);
         }
 
         @Test
@@ -330,7 +329,7 @@ class DocumentEnrichmentProcessorImplTest {
             assertThatThrownBy(() -> enrichmentProcessor.enrichDocument(1L))
                     .isInstanceOf(DocumentEnrichmentException.class);
 
-            verify(documentStatusService).updateStatus(1L, Document.Status.ENRICHMENT_ERROR);
+            verify(documentStatusService).markEnrichmentFailure(1L, "Enrichment service error");
         }
 
         @Test
@@ -349,7 +348,7 @@ class DocumentEnrichmentProcessorImplTest {
             assertThatThrownBy(() -> enrichmentProcessor.enrichDocument(1L))
                     .isInstanceOf(Exception.class);
 
-            verify(documentStatusService).updateStatus(1L, Document.Status.ENRICHMENT_ERROR);
+            verify(documentStatusService).markEnrichmentFailure(1L, "Timeout");
         }
     }
 

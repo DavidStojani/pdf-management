@@ -30,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -114,7 +115,7 @@ class OcrEventListenerTest {
 
             // Assert
             verify(documentStatusService).updateStatus(1L, Document.Status.OCR_IN_PROGRESS);
-            verify(documentStatusService).updateStatus(1L, Document.Status.OCR_ERROR);
+            verify(documentStatusService).markOcrFailure(1L, "No PDF content found");
             verify(ocrProcessor, never()).extractTextFromPdf(any());
             verify(eventPublisher, never()).publishEvent(any(EnrichmentEvent.class));
         }
@@ -133,7 +134,7 @@ class OcrEventListenerTest {
 
             // Assert
             verify(documentStatusService).updateStatus(1L, Document.Status.OCR_IN_PROGRESS);
-            verify(documentStatusService).updateStatus(1L, Document.Status.OCR_ERROR);
+            verify(documentStatusService).markOcrFailure(1L, "No PDF content found");
             verify(ocrProcessor, never()).extractTextFromPdf(any());
             verify(eventPublisher, never()).publishEvent(any(EnrichmentEvent.class));
         }
@@ -165,6 +166,7 @@ class OcrEventListenerTest {
             verify(documentStatusService).updateStatus(1L, Document.Status.OCR_IN_PROGRESS);
             verify(ocrProcessor).extractTextFromPdf(testDocument.getPdfContent());
             verify(documentStatusService).updateStatus(1L, Document.Status.OCR_COMPLETED);
+            verify(documentStatusService).resetOcrRetry(1L);
 
             ArgumentCaptor<List<PagesPdfEntity>> pagesCaptor = ArgumentCaptor.forClass(List.class);
             verify(pageRepository).saveAll(pagesCaptor.capture());
@@ -249,7 +251,7 @@ class OcrEventListenerTest {
 
             // Assert
             verify(documentStatusService).updateStatus(1L, Document.Status.OCR_IN_PROGRESS);
-            verify(documentStatusService).updateStatus(1L, Document.Status.OCR_ERROR);
+            verify(documentStatusService).markOcrFailure(eq(1L), contains("OCR processing failed"));
             verify(pageRepository, never()).saveAll(anyList());
             verify(eventPublisher, never()).publishEvent(any(EnrichmentEvent.class));
         }
@@ -304,13 +306,10 @@ class OcrEventListenerTest {
             ocrEventListener.handleOcrEvent(ocrEvent);
 
             // Assert
-            verify(documentStatusService).updateStatus(1L, Document.Status.OCR_COMPLETED);
-
-            ArgumentCaptor<List<PagesPdfEntity>> pagesCaptor = ArgumentCaptor.forClass(List.class);
-            verify(pageRepository).saveAll(pagesCaptor.capture());
-            assertThat(pagesCaptor.getValue()).isEmpty();
-
-            verify(eventPublisher).publishEvent(any(EnrichmentEvent.class));
+            verify(documentStatusService).updateStatus(1L, Document.Status.OCR_IN_PROGRESS);
+            verify(documentStatusService).markOcrFailure(1L, "OCR produced no text pages");
+            verify(pageRepository, never()).saveAll(anyList());
+            verify(eventPublisher, never()).publishEvent(any(EnrichmentEvent.class));
         }
 
         @Test

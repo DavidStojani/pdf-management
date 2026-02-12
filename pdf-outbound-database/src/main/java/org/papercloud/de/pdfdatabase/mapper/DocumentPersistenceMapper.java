@@ -27,6 +27,12 @@ public interface DocumentPersistenceMapper {
 
     @Mapping(source = "pages", target = "pages")
     @Mapping(source = "owner", target = "owner")
+    @Mapping(target = "ocrRetryCount", ignore = true)
+    @Mapping(target = "ocrNextRetryAt", ignore = true)
+    @Mapping(target = "ocrLastError", ignore = true)
+    @Mapping(target = "enrichmentRetryCount", ignore = true)
+    @Mapping(target = "enrichmentNextRetryAt", ignore = true)
+    @Mapping(target = "enrichmentLastError", ignore = true)
     DocumentPdfEntity toEntity(Document domain);
 
     List<Document> toDomainList(List<DocumentPdfEntity> entities);

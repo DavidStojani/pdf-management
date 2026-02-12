@@ -32,3 +32,6 @@ app:
   auth:
     email-verification:
       enabled: false
+  recovery:
+    retry:
+      enabled: false

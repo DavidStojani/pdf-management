@@ -55,5 +55,22 @@ public class DocumentPdfEntity {
 
   private LocalDate dateOnDocument;
 
+  @Builder.Default
   private boolean failedEnrichment = false;
+
+  @Builder.Default
+  private int ocrRetryCount = 0;
+
+  private LocalDateTime ocrNextRetryAt;
+
+  @Column(length = 1000)
+  private String ocrLastError;
+
+  @Builder.Default
+  private int enrichmentRetryCount = 0;
+
+  private LocalDateTime enrichmentNextRetryAt;
+
+  @Column(length = 1000)
+  private String enrichmentLastError;
 }

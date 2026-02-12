@@ -35,6 +35,15 @@ app:
   auth:
     email-verification:
       enabled: false
+  recovery:
+    retry:
+      enabled: true
+      fixed-delay-ms: 900000
+      max-attempts: 5
+      batch-size: 50
+      backoff:
+        base-minutes: 15
+        max-minutes: 360
 
 tesseract:
   datapath: /usr/share/tesseract-ocr/4.00/tessdata
@@ -114,6 +123,15 @@ elasticsearch:
 
 app:
   frontend-url: ${FRONTEND_URL}
+  recovery:
+    retry:
+      enabled: ${RECOVERY_RETRY_ENABLED:true}
+      fixed-delay-ms: ${RECOVERY_RETRY_FIXED_DELAY_MS:900000}
+      max-attempts: ${RECOVERY_RETRY_MAX_ATTEMPTS:5}
+      batch-size: ${RECOVERY_RETRY_BATCH_SIZE:50}
+      backoff:
+        base-minutes: ${RECOVERY_RETRY_BACKOFF_BASE_MINUTES:15}
+        max-minutes: ${RECOVERY_RETRY_BACKOFF_MAX_MINUTES:360}
 
 tesseract:
   datapath: ${TESSERACT_DATAPATH:/usr/share/tesseract-ocr/4.00/tessdata}

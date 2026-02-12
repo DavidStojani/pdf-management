@@ -48,7 +48,7 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
             String cleanedText = prepareForEnrichment(documentId);
             EnrichmentResultDTO result = requestEnrichment(cleanedText, documentId);
             if (!validateEnrichmentResult(result, documentId)) {
-                markEnrichmentFailed(documentId);
+                documentStatusService.markEnrichmentFailure(documentId, "Invalid enrichment result");
                 return;
             }
 
@@ -56,7 +56,7 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
             log.info("Completed enrichment for document {}", documentId);
         } catch (Exception ex) {
             log.error("Enrichment execution failed for document {}", documentId, ex);
-            markEnrichmentFailed(documentId);
+            documentStatusService.markEnrichmentFailure(documentId, ex.getMessage());
             throw wrapEnrichmentException(ex);
         } finally {
             logEnrichmentDuration(startTime, documentId);
@@ -66,8 +66,10 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     protected String prepareForEnrichment(Long documentId) {
         DocumentPdfEntity document = getDocumentById(documentId);
-        if (document.getStatus() != Document.Status.OCR_COMPLETED) {
-            throw new DocumentEnrichmentException("Document status is not OCR_COMPLETED for ID: " + documentId);
+        //Todo Check again:
+        if (document.getStatus() != Document.Status.OCR_COMPLETED
+                && document.getStatus() != Document.Status.ENRICHMENT_ERROR) {
+            throw new DocumentEnrichmentException("Document status must be OCR_COMPLETED or ENRICHMENT_ERROR for ID: " + documentId);
         }
 
         document.setStatus(Document.Status.ENRICHMENT_IN_PROGRESS);
@@ -90,14 +92,7 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
         document.setFailedEnrichment(false);
         document.setStatus(Document.Status.ENRICHMENT_COMPLETED);
         documentRepository.save(document);
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    protected void markEnrichmentFailed(Long documentId) {
-        documentStatusService.updateStatus(documentId, Document.Status.ENRICHMENT_ERROR);
-        DocumentPdfEntity document = getDocumentById(documentId);
-        document.setFailedEnrichment(true);
-        documentRepository.save(document);
+        documentStatusService.resetEnrichmentRetry(documentId);
     }
 
     private DocumentPdfEntity getDocumentById(Long documentId) {

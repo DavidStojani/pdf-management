@@ -11,6 +11,7 @@ import org.papercloud.de.core.domain.Document;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfservice.errors.DocumentNotFoundException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
@@ -29,6 +30,12 @@ class DocumentStatusServiceTest {
 
     @InjectMocks
     private DocumentStatusService documentStatusService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void initConfig() {
+        ReflectionTestUtils.setField(documentStatusService, "retryBackoffBaseMinutes", 15L);
+        ReflectionTestUtils.setField(documentStatusService, "retryBackoffMaxMinutes", 360L);
+    }
 
     @Nested
     @DisplayName("getStatus")
@@ -111,6 +118,52 @@ class DocumentStatusServiceTest {
             assertThat(updated).isFalse();
             assertThat(doc.getStatus()).isEqualTo(Document.Status.OCR_COMPLETED);
             verify(documentRepository, never()).save(doc);
+        }
+    }
+
+    @Nested
+    @DisplayName("Failure/Retry metadata")
+    class FailureRetryMetadataTests {
+
+        @Test
+        @DisplayName("markEnrichmentFailure should set status and increment retry metadata")
+        void markEnrichmentFailure_setsRetryMetadata() {
+            DocumentPdfEntity doc = DocumentPdfEntity.builder()
+                    .id(1L)
+                    .status(Document.Status.ENRICHMENT_IN_PROGRESS)
+                    .enrichmentRetryCount(1)
+                    .build();
+            when(documentRepository.findById(1L)).thenReturn(Optional.of(doc));
+
+            documentStatusService.markEnrichmentFailure(1L, "Provider timeout");
+
+            assertThat(doc.getStatus()).isEqualTo(Document.Status.ENRICHMENT_ERROR);
+            assertThat(doc.getEnrichmentRetryCount()).isEqualTo(2);
+            assertThat(doc.getEnrichmentNextRetryAt()).isNotNull();
+            assertThat(doc.getEnrichmentLastError()).isEqualTo("Provider timeout");
+            verify(documentRepository).save(doc);
+        }
+
+        @Test
+        @DisplayName("resetEnrichmentRetry should clear retry metadata")
+        void resetEnrichmentRetry_clearsRetryMetadata() {
+            DocumentPdfEntity doc = DocumentPdfEntity.builder()
+                    .id(1L)
+                    .status(Document.Status.ENRICHMENT_COMPLETED)
+                    .failedEnrichment(true)
+                    .enrichmentRetryCount(3)
+                    .enrichmentLastError("error")
+                    .build();
+            doc.setEnrichmentNextRetryAt(java.time.LocalDateTime.now());
+            when(documentRepository.findById(1L)).thenReturn(Optional.of(doc));
+
+            documentStatusService.resetEnrichmentRetry(1L);
+
+            assertThat(doc.isFailedEnrichment()).isFalse();
+            assertThat(doc.getEnrichmentRetryCount()).isZero();
+            assertThat(doc.getEnrichmentLastError()).isNull();
+            assertThat(doc.getEnrichmentNextRetryAt()).isNull();
+            verify(documentRepository).save(doc);
         }
     }
 }

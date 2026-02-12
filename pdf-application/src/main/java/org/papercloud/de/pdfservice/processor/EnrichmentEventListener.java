@@ -25,7 +25,7 @@ public class EnrichmentEventListener {
         try {
             enrichmentProcessor.enrichDocument(docId);
         } catch (Exception e) {
-            throw new RuntimeException(e); //TODO DO SOMETHING HERE WITH THE EXception
+            log.error("Enrichment processing failed for docId {}", docId, e);
         }
     }
 }

@@ -50,14 +50,20 @@ public class OcrEventListener {
             byte[] pdfBytes = document.getPdfContent();
             if (pdfBytes == null || pdfBytes.length == 0) {
                 log.error("No PDF content found for document ID: {}", docId);
-                documentStatusService.updateStatus(document.getId(), Document.Status.OCR_ERROR);
+                documentStatusService.markOcrFailure(document.getId(), "No PDF content found");
                 return;
             }
 
             List<String> pageTexts = ocrProcessor.extractTextFromPdf(pdfBytes);
+            if (pageTexts == null || pageTexts.isEmpty()) {
+                log.error("OCR produced no pages for document ID: {}", docId);
+                documentStatusService.markOcrFailure(document.getId(), "OCR produced no text pages");
+                return;
+            }
 
             log.info("OCR completed for document ID: {}, total pages: {}", docId, pageTexts.size());
             documentStatusService.updateStatus(document.getId(), Document.Status.OCR_COMPLETED);
+            documentStatusService.resetOcrRetry(document.getId());
             savePages(document, pageTexts);
 
             // Trigger enrichment
@@ -65,7 +71,7 @@ public class OcrEventListener {
 
         } catch (IOException e) {
             log.error("OCR processing failed for document ID: {}", docId, e);
-            documentStatusService.updateStatus(document.getId(), Document.Status.OCR_ERROR);
+            documentStatusService.markOcrFailure(document.getId(), e.getMessage());
         }
     }
 
