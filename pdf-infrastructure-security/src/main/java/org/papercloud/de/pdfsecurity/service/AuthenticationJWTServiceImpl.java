@@ -1,6 +1,5 @@
 package org.papercloud.de.pdfsecurity.service;
 
-import jakarta.annotation.PostConstruct;
 import org.papercloud.de.core.dto.auth.AuthResponse;
 import org.papercloud.de.core.dto.auth.LoginRequest;
 import org.papercloud.de.core.dto.auth.RegisterRequest;
@@ -10,6 +9,7 @@ import org.papercloud.de.pdfdatabase.repository.RoleRepository;
 import org.papercloud.de.pdfdatabase.repository.UserRepository;
 import org.papercloud.de.core.ports.inbound.AuthenticationService;
 import org.papercloud.de.pdfsecurity.util.JwtUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,6 +20,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -27,6 +28,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class AuthenticationJWTServiceImpl implements AuthenticationService {
 
     private final UserRepository userRepository;
@@ -35,27 +37,26 @@ public class AuthenticationJWTServiceImpl implements AuthenticationService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
+    private final TokenService tokenService;
+
+    @Value("${app.auth.email-verification.enabled:true}")
+    private boolean emailVerificationEnabled;
 
     public AuthenticationJWTServiceImpl(
             UserRepository userRepository, RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
             JwtUtil jwtUtil,
             AuthenticationManager authenticationManager,
-            EmailService emailService) {
+            EmailService emailService,
+            TokenService tokenService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.authenticationManager = authenticationManager;
         this.emailService = emailService;
+        this.tokenService = tokenService;
     }
-
-    @PostConstruct
-
-    public void init() {
-        System.out.println("AuthenticationJWTServiceImpl initialized");
-    }
-
 
     @Override
     @Transactional
@@ -66,17 +67,16 @@ public class AuthenticationJWTServiceImpl implements AuthenticationService {
             throw new IllegalArgumentException("Passwords don't match");
         }
 
-        //Todo Change the UI for this
-//        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-//            throw new IllegalArgumentException("Username already exists");
-//        }
+        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+            throw new IllegalArgumentException("Username already exists");
+        }
 
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email already exists");
         }
 
         // Create new user
-        UserEntity user = UserEntity.builder().username(request.getEmail())
+        UserEntity user = UserEntity.builder().username(request.getUsername().trim())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .enabled(true)
@@ -91,10 +91,16 @@ public class AuthenticationJWTServiceImpl implements AuthenticationService {
         UserEntity savedUser = userRepository.save(user);
 
         // Generate verification token
-        String verificationToken = generateVerificationToken(savedUser);
+        String verificationToken = tokenService.createVerificationToken(savedUser);
 
         // Send verification email
-        //emailService.sendVerificationEmail(savedUser.getEmail(), verificationToken);
+        if (emailVerificationEnabled) {
+            try {
+                emailService.sendVerificationEmail(savedUser.getEmail(), verificationToken);
+            } catch (Exception ex) {
+                log.error("Failed to send verification email to {}", savedUser.getEmail(), ex);
+            }
+        }
 
         // Generate JWT token
         UserDetails userDetails = new User(
@@ -121,7 +127,8 @@ public class AuthenticationJWTServiceImpl implements AuthenticationService {
         org.springframework.security.core.userdetails.User principal =
                 (org.springframework.security.core.userdetails.User) authentication.getPrincipal();
 
-        UserEntity user = userRepository.findByEmail(principal.getUsername())
+        UserEntity user = userRepository.findByEmail(request.getEmail())
+                .or(() -> userRepository.findByUsername(principal.getUsername()))
                 .orElseThrow(() -> new BadCredentialsException("User not found"));
 
         // Update last login time
@@ -143,12 +150,5 @@ public class AuthenticationJWTServiceImpl implements AuthenticationService {
                         .map(RoleEntity::getName)
                         .toArray(String[]::new))
                 .build();
-    }
-
-    private String generateVerificationToken(UserEntity user) {
-        // Implementation of token generation
-        // This would create a verification token and store it in the database
-        // ...
-        return "token-value";
     }
 }

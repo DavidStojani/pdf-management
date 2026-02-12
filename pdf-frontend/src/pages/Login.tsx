@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { toast } from "sonner";
 import RegisterModal from "@/components/RegisterModal";
+import { getErrorMessage } from "@/lib/api";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -36,7 +37,7 @@ const Login = () => {
       await login(email, password);
       navigate("/app", { replace: true });
     } catch (err: any) {
-      toast.error(err.message || "Login failed");
+      toast.error(getErrorMessage(err, "Login failed"));
     }
   };
 
@@ -52,7 +53,7 @@ const Login = () => {
       setForgotOpen(false);
       setForgotEmail("");
     } catch (err: any) {
-      toast.error(err.message || "Failed to send reset link");
+      toast.error(getErrorMessage(err, "Failed to send reset link"));
     }
   };
 

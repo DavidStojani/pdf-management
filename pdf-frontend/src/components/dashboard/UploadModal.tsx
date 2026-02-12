@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { FileUp, Camera, X, Loader2 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, getErrorMessage } from "@/lib/api";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -42,7 +42,7 @@ const UploadModal = ({ open, onOpenChange, onSuccess }: Props) => {
       onSuccess();
       handleClose(false);
     } catch (err: any) {
-      toast.error(err.message || "Upload failed");
+      toast.error(getErrorMessage(err, "Upload failed"));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -68,7 +68,7 @@ const UploadModal = ({ open, onOpenChange, onSuccess }: Props) => {
       onSuccess();
       handleClose(false);
     } catch (err: any) {
-      toast.error(err.message || "Upload failed");
+      toast.error(getErrorMessage(err, "Upload failed"));
     } finally {
       setUploading(false);
     }

@@ -83,7 +83,7 @@ public class AuthControllerIT {
         }
 
         @Test
-        void passwordMismatch_returns500() throws Exception {
+        void passwordMismatch_returns400() throws Exception {
             Map<String, String> request = Map.of(
                     "username", "newuser",
                     "email", "newuser@test.com",
@@ -95,11 +95,11 @@ public class AuthControllerIT {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andDo(print())
-                    .andExpect(status().is5xxServerError());
+                    .andExpect(status().isBadRequest());
         }
 
         @Test
-        void duplicateUsername_returns500() throws Exception {
+        void duplicateUsername_returns400() throws Exception {
             createUser("existinguser", "existing@test.com");
 
             Map<String, String> request = Map.of(
@@ -113,11 +113,11 @@ public class AuthControllerIT {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andDo(print())
-                    .andExpect(status().is5xxServerError());
+                    .andExpect(status().isBadRequest());
         }
 
         @Test
-        void duplicateEmail_returns500() throws Exception {
+        void duplicateEmail_returns400() throws Exception {
             createUser("existinguser", "taken@test.com");
 
             Map<String, String> request = Map.of(
@@ -131,7 +131,22 @@ public class AuthControllerIT {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andDo(print())
-                    .andExpect(status().is5xxServerError());
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        void missingEmail_returns400() throws Exception {
+            Map<String, String> request = Map.of(
+                    "username", "newuser",
+                    "password", "password123",
+                    "confirmPassword", "password123"
+            );
+
+            mockMvc.perform(post("/api/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest());
         }
     }
 
@@ -143,7 +158,7 @@ public class AuthControllerIT {
             createUser("loginuser", "login@test.com");
 
             Map<String, String> request = Map.of(
-                    "username", "loginuser",
+                    "email", "login@test.com",
                     "password", "password123"
             );
 
@@ -164,7 +179,7 @@ public class AuthControllerIT {
             createUser("loginuser", "login@test.com");
 
             Map<String, String> request = Map.of(
-                    "username", "loginuser",
+                    "email", "login@test.com",
                     "password", "wrongpassword"
             );
 
@@ -178,7 +193,7 @@ public class AuthControllerIT {
         @Test
         void nonExistentUser_returns401() throws Exception {
             Map<String, String> request = Map.of(
-                    "username", "ghostuser",
+                    "email", "ghost@test.com",
                     "password", "password123"
             );
 
@@ -187,6 +202,20 @@ public class AuthControllerIT {
                             .content(objectMapper.writeValueAsString(request)))
                     .andDo(print())
                     .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        void invalidEmailFormat_returns400() throws Exception {
+            Map<String, String> request = Map.of(
+                    "email", "not-an-email",
+                    "password", "password123"
+            );
+
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest());
         }
     }
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { api } from "@/lib/api";
+import { api, getErrorMessage } from "@/lib/api";
 import { toast } from "sonner";
 
 interface Props {
@@ -29,7 +29,7 @@ const FavouriteButton = ({ docId, isFavourite, onToggle }: Props) => {
     } catch (err: any) {
       // Revert
       onToggle(docId, isFavourite);
-      toast.error(err.message || "Failed to update favourite");
+      toast.error(getErrorMessage(err, "Failed to update favourite"));
     } finally {
       setLoading(false);
     }

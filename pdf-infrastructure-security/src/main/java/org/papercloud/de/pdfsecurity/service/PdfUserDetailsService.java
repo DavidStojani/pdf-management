@@ -21,7 +21,8 @@ public class PdfUserDetailsService implements UserDetailsService {
 
   @Override
   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-    UserEntity user = userRepository.findByUsername(username)
+    UserEntity user = userRepository.findByEmail(username)
+            .or(() -> userRepository.findByUsername(username))
             .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
 
     return new org.springframework.security.core.userdetails.User(

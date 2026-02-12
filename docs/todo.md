@@ -1,19 +1,24 @@
 # TODOs
 
 ## 2026-02-11
-1. Fix infra on Ubuntu (docker + services).
-2. Test full flow; fix enrichment status mismatch (Ollama failure still ends as `ENRICHMENT_COMPLETED`).
-3. Fix login/register behavior in backend (validation + responses).
-4. Add tag search in UI.
-5. Show document title (post-enrichment) in results panel.
-6. Show page count near document name.
-7. Implement favourites feature end-to-end.
-8. Improve backend exception handling.
-9. Improve frontend error handling + surface correct HTTP codes.
-10. Add observability stack (Grafana/Prometheus or similar).
-11. Implement CI/CD pipeline.
-12. Research OpenSearch (for search backend).
-13. Plan security infrastructure (HashiCorp Vault or similar).
-14. Improve LLM prompt quality.
-15. Explore RAG for “chat with docs”.
-16. Ask Claude for app version feedback.
+8. Improve backend exception handling: Examine how exceptions are handeled in the application. -- HIGH  ---DONE
+   9. Improve frontend error handling + surface correct HTTP codes. -- HIGH     ---DONE
+
+      3. Fix login/register behavior in backend (validation + responses). --MEDIUM  --- DONE
+
+4. Test full flow; fix enrichment status mismatch (Ollama failure still ends as `ENRICHMENT_COMPLETED`). -- HIGH  ---DONE
+
+2. Add a batch or a cronjob or similar, to see which documents are not 'ENRICHMENT_COMPLETED', and start a new thread to process them again, from the step where they failed -- LATER
+ 
+5. Add tag search in UI. -- UI
+5. Show document title (post-enrichment) in results panel. -- UI
+6. Show page count near document name. -- UI
+7. Implement favourites feature end-to-end. -- UI+backend
+10. Add observability stack (Grafana/Prometheus or similar). -- LOW
+11. Implement CI/CD pipeline making use of synonlogy 218(NO DOCKER) apps and my ubuntu server. -- LOW
+ 
+13. Research OpenSearch (for search backend). --LATER
+13. Plan security infrastructure (HashiCorp Vault or similar). --LATER
+14. Improve LLM prompt quality. --LATER
+15. Explore RAG for “chat with docs”. --LATER
+16. Ask Claude for app version feedback. --LATER

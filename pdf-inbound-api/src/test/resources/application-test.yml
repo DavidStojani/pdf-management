@@ -27,3 +27,8 @@ logging:
     com.yourcompany.yourproject: DEBUG
     org.testcontainers: INFO
     org.springframework.security: DEBUG
+
+app:
+  auth:
+    email-verification:
+      enabled: false

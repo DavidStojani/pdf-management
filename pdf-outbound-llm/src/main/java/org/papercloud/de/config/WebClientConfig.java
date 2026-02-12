@@ -1,4 +1,5 @@
 package org.papercloud.de.config;
+
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
@@ -24,9 +25,8 @@ public class WebClientConfig {
                         .addHandlerLast(new WriteTimeoutHandler(600, TimeUnit.SECONDS))
                 );
 
-        //ToDo: hier andere Lösung als localhost
         return WebClient.builder()
-                .baseUrl("http://ollama:11434")
+                .baseUrl("http://192.168.2.107:11434")
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();
     }

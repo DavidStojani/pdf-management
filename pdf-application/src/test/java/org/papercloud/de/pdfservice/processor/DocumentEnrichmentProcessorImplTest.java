@@ -23,7 +23,6 @@ import org.papercloud.de.pdfservice.errors.InvalidDocumentException;
 import org.papercloud.de.pdfservice.service.DocumentStatusService;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
@@ -33,8 +32,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -237,10 +234,39 @@ class DocumentEnrichmentProcessorImplTest {
 
             // Act & Assert
             assertThatThrownBy(() -> enrichmentProcessor.enrichDocument(1L))
-                    .isInstanceOf(Exception.class);
+                    .isInstanceOf(DocumentEnrichmentException.class)
+                    .hasMessageContaining("Enrichment result is empty");
 
-            // updateStatus may be called twice: once in null check, once in markEnrichmentFailed
-            verify(documentStatusService, atLeast(1)).updateStatus(1L, Document.Status.ENRICHMENT_ERROR);
+            verify(documentStatusService).updateStatus(1L, Document.Status.ENRICHMENT_ERROR);
+            assertThat(testDocument.isFailedEnrichment()).isTrue();
+        }
+
+        @Test
+        @DisplayName("should throw exception when enrichment provider returns failed flag")
+        void should_throwException_when_enrichmentReturnsFailedFlag() {
+            // Arrange
+            EnrichmentResultDTO enrichmentResult = EnrichmentResultDTO.builder()
+                    .title("Unknown Title")
+                    .date_sent("01.01.2000")
+                    .tags(Collections.emptyList())
+                    .flagFailedEnrichment(true)
+                    .build();
+
+            when(documentRepository.findById(1L))
+                    .thenReturn(Optional.of(testDocument));
+            when(pageRepository.findByDocumentIdOrderByPageNumber(1L))
+                    .thenReturn(List.of(testPage));
+            when(textCleaningService.cleanOcrText(any())).thenReturn("text");
+            when(enrichmentService.enrichTextAsync(any()))
+                    .thenReturn(Mono.just(enrichmentResult));
+
+            // Act & Assert
+            assertThatThrownBy(() -> enrichmentProcessor.enrichDocument(1L))
+                    .isInstanceOf(DocumentEnrichmentException.class)
+                    .hasMessageContaining("Enrichment provider reported a failure");
+
+            verify(documentStatusService).updateStatus(1L, Document.Status.ENRICHMENT_ERROR);
+            assertThat(testDocument.isFailedEnrichment()).isTrue();
         }
 
         @Test
@@ -270,8 +296,7 @@ class DocumentEnrichmentProcessorImplTest {
 
             // Act & Assert - DocumentNotFoundException gets wrapped in DocumentEnrichmentException
             assertThatThrownBy(() -> enrichmentProcessor.enrichDocument(999L))
-                    .isInstanceOf(DocumentEnrichmentException.class)
-                    .hasCauseInstanceOf(DocumentNotFoundException.class);
+                    .isInstanceOf(DocumentNotFoundException.class);
         }
 
         @Test

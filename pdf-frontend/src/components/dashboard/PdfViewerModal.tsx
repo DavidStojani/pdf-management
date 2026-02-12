@@ -3,7 +3,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { X, Download, Loader2 } from "lucide-react";
-import { DocumentItem, api } from "@/lib/api";
+import { DocumentItem, api, getErrorMessage } from "@/lib/api";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import FavouriteButton from "./FavouriteButton";
@@ -56,7 +56,7 @@ const PdfViewerModal = ({ document: doc, onClose, onFavouriteToggle }: Props) =>
       })
       .catch((err: any) => {
         if (!cancelled) {
-          toast.error(err.message || "Failed to load preview");
+          toast.error(getErrorMessage(err, "Failed to load preview"));
         }
       })
       .finally(() => {
@@ -80,7 +80,7 @@ const PdfViewerModal = ({ document: doc, onClose, onFavouriteToggle }: Props) =>
       URL.revokeObjectURL(url);
       toast.success("Download started");
     } catch (err: any) {
-      toast.error(err.message || "Download failed");
+      toast.error(getErrorMessage(err, "Download failed"));
     }
   };
 

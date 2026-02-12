@@ -49,9 +49,7 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
             log.info("Cleaned text for document : {}", cleanedText);
             EnrichmentResultDTO result = enrichmentService.enrichTextAsync(cleanedText)
                     .block(Duration.ofSeconds(60));
-            if (result == null) {
-                documentStatusService.updateStatus(documentId, Document.Status.ENRICHMENT_ERROR);
-            }
+            validateEnrichmentResult(result);
 
             saveEnrichmentResult(documentId, result);
             log.info("Successfully completed enrichment for document ID: {}", documentId);
@@ -89,6 +87,7 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
         document.setTitle(enrichmentResult.getTitle());
         document.setDateOnDocument(parseDocumentDate(enrichmentResult.getDate_sent()));
         document.setTags(enrichmentResult.getTagNames());
+        document.setFailedEnrichment(false);
         document.setStatus(Document.Status.ENRICHMENT_COMPLETED);
         documentRepository.save(document);
     }
@@ -97,6 +96,9 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
     protected void markEnrichmentFailed(Long documentId, Exception ex) {
         log.error("Enrichment failed for document {}", documentId, ex);
         documentStatusService.updateStatus(documentId, Document.Status.ENRICHMENT_ERROR);
+        DocumentPdfEntity document = getDocumentById(documentId);
+        document.setFailedEnrichment(true);
+        documentRepository.save(document);
     }
 
     private DocumentPdfEntity getDocumentById(Long documentId) {
@@ -113,6 +115,15 @@ public class DocumentEnrichmentProcessorImpl implements DocumentEnrichmentProces
     private String cleanFirstPageText(List<String> pageTexts) {
         // validatePageTexts already ensures index 0 exists
         return textCleaningService.cleanOcrText(pageTexts.get(0));
+    }
+
+    private void validateEnrichmentResult(EnrichmentResultDTO result) {
+        if (result == null) {
+            throw new DocumentEnrichmentException("Enrichment result is empty");
+        }
+        if (result.isFlagFailedEnrichment()) {
+            throw new DocumentEnrichmentException("Enrichment provider reported a failure");
+        }
     }
 
 

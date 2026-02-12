@@ -46,3 +46,277 @@
 │                                             │
 │  Ports bound to LAN IP / firewall protected │
 └─────────────────────────────────────────────┘
+
+
+--- MAYBE PROD----
+                     Internet
+                        │
+                        ▼
+            ┌─────────────────────────┐
+            │  Reverse Proxy / LB      │
+            │  (Nginx / Traefik /      │
+            │   Caddy / Cloud LB)      │
+            │  - TLS termination       │
+            │  - routing / rate limit  │
+            └───────────┬─────────────┘
+                        │ HTTPS
+                        ▼
+        ┌──────────────────────────────────┐
+        │ Application Tier                 │
+        │                                  │
+        │  ┌────────────────────────────┐  │
+        │  │ Spring Boot API (container) │  │
+        │  │ - immutable image           │  │
+        │  │ - env config                │  │
+        │  └───────────┬────────────────┘  │
+        │              │                   │
+        └──────────────┼───────────────────┘
+                       │ private docker network
+         ┌─────────────┼────────────────────────────┐
+         │             │                            │
+         ▼             ▼                            ▼
+┌────────────────┐  ┌────────────────────┐  ┌───────────────────┐
+│ PostgreSQL      │  │ Elasticsearch       │  │ Ollama / LLM svc   │
+│ (container or   │  │ (container or       │  │ (often separate)   │
+│ managed service)│  │ managed service)    │  │                    │
+│ - persistent vol│  │ - persistent vol    │  │ - model volume     │
+│ - backups       │  │ - memory tuned      │  │ - resource limits  │
+└────────────────┘  └────────────────────┘  └───────────────────┘
+
+(Optional)
+┌─────────────────────────────┐
+│ Observability               │
+│ logs / metrics / tracing    │
+│ (Prometheus/Grafana, etc.)  │
+└─────────────────────────────┘
+Best practices (what changes vs dev)
+1) Immutable images
+
+In prod you do not mount JARs.
+
+You build an image that contains your app:
+
+COPY app.jar ...
+
+deploy by pulling/rebuilding image
+
+docker compose up -d replaces container safely
+
+2) Don’t expose databases/search to the public
+
+Only the reverse proxy exposes ports (80/443).
+
+Postgres/Elasticsearch/Ollama should be on an internal network only.
+
+If you need admin access:
+
+SSH tunnel, VPN, or restricted firewall allowlist
+
+3) Secrets management
+
+No admin/admin in compose.
+
+Use Docker secrets, .env (protected), or a secret manager (Vault/Cloud).
+
+Rotate credentials.
+
+4) Persistence + backups
+
+Postgres: scheduled dumps or physical backups.
+
+Elasticsearch: snapshots (repo snapshots) if you care about restoring indices.
+
+Ollama: persistent model volume (and be mindful of disk usage).
+
+5) Resource limits
+
+Especially for:
+
+Elasticsearch (heap via ES_JAVA_OPTS)
+
+Ollama (CPU/RAM constraints)
+
+Use compose deploy.resources (Swarm) or mem_limit (Compose v2 supports some limits depending on runtime).
+
+6) Healthchecks + restart policies
+
+Healthchecks for API, Postgres, ES
+
+restart: unless-stopped
+
+Add readiness checks in Spring if you depend on ES/DB at startup.
+
+7) Observability
+
+Centralize logs (at minimum: docker logs + log rotation)
+
+Metrics/alerts if this matters beyond hobby scale
+
+“Best” production topology choices
+If you want simplest “single server prod”
+
+One docker-compose.prod.yml
+
+Reverse proxy + app + Postgres + ES + Ollama on the same host
+
+Everything internal network except 443
+
+If you want “best practice” at growing scale
+
+Managed Postgres (or separate DB server)
+
+Managed Elasticsearch/OpenSearch (or separate node)
+
+App containers behind a load balancer
+
+Ollama often isolated due to resource demands
+
+
+-------------Production architecture for multi-user
+
+                 Internet
+                    │
+                    ▼
+        ┌──────────────────────────┐
+        │ CDN (optional)           │
+        │ static frontend, caching │
+        └───────────┬──────────────┘
+                    │
+                    ▼
+        ┌──────────────────────────┐
+        │ Load Balancer / Ingress   │
+        │ TLS, WAF, rate limiting   │
+        └───────────┬──────────────┘
+                    │ HTTPS
+      ┌─────────────┴───────────────────────────┐
+      │                                         │
+      ▼                                         ▼
+┌───────────────┐                       ┌────────────────┐
+│ API instances  │  (scale horizontally) │ Background Jobs │
+│ Spring Boot    │<--------------------->│ (queue workers) │
+└───────┬───────┘                       └───────┬────────┘
+        │ private network                          │
+        │                                          │
+        ▼                                          ▼
+┌──────────────────┐     ┌──────────────────┐   ┌───────────────────┐
+│ PostgreSQL        │     │ Elasticsearch     │   │ Ollama / LLM svc   │
+│ (managed ideal)   │     │ (managed/cluster) │   │ isolated resource  │
+│ backups/replicas  │     │ snapshots/tuning  │   │ limits + queue     │
+└──────────────────┘     └──────────────────┘   └───────────────────┘
+
+(Optional but common)
+┌──────────────────────────┐
+│ Redis (cache/sessions)    │
+│ Object Storage (S3/MinIO) │
+│ Observability (logs/metrics)│
+└──────────────────────────┘
+
+
+What changes vs your current “dev-style compose” (best practices)
+1) Put users at the edge
+
+TLS termination (Traefik/Nginx/Caddy or a cloud LB)
+
+Rate limiting + request size limits + basic WAF rules
+
+Centralized access logs
+
+2) Scale the app, not the DB
+
+Run multiple Spring Boot containers behind the LB
+
+Keep the DB as a single managed/replicated system (or at least persistent volumes + backups)
+
+3) Don’t run heavy LLM work inline on request threads
+
+For multi-user, Ollama can become a bottleneck fast. Best practice:
+
+API request enqueues job → returns job id
+
+Worker consumes queue → calls Ollama
+
+Client polls or uses WebSocket/SSE for completion
+
+This prevents one user from blocking others.
+
+4) Strong multi-tenant boundaries
+
+Depending on your product:
+
+Row-level tenancy (tenant_id column everywhere) + strict checks
+
+Or schema-per-tenant (stronger isolation, more ops)
+
+Or db-per-tenant (strongest isolation, most ops)
+If you’re unsure: start with tenant_id + strict service-layer enforcement, and add DB constraints.
+
+5) Sessions, caching, and throttling
+
+If you scale API horizontally, don’t store sessions in memory
+
+Use stateless JWT or Redis-backed sessions
+
+Add per-user/per-tenant quotas (requests/minute, concurrent jobs)
+
+6) Operations basics that matter more with multiple users
+
+Secrets: no plaintext in compose
+
+Backups and restore testing (Postgres + ES snapshots)
+
+Healthchecks + readiness + rolling deploys
+
+Observability: structured logs + metrics + tracing if needed
+
+What platform should you use?
+If it’s still a “single multi-user server” (one machine/VPS)
+
+You can do it with Docker Compose + Traefik, and it’s totally legit for early stages.
+
+Pattern:
+
+traefik (public 443)
+
+api (replicas: 2–4)
+
+worker (replicas: 1–N)
+
+postgres (or managed)
+
+redis (optional)
+
+elasticsearch (careful with RAM)
+
+ollama (isolated limits)
+
+If you expect real growth
+
+Kubernetes (or a managed container platform) becomes attractive mainly for:
+
+autoscaling
+
+rolling updates
+
+service discovery
+
+secrets/config management
+
+But don’t jump too early unless you need it.
+
+A “best practice” multi-user setup that still fits your world
+
+If you want a pragmatic next step from where you are:
+
+Add Traefik in front (TLS + routing + rate limit middleware)
+
+Split your app into:
+
+api service
+
+worker service
+
+Add Redis (optional but very helpful)
+
+Keep Postgres/ES persistent + backups
+
+Keep infra internal network; only Traefik exposes 443

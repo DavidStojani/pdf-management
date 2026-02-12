@@ -10,9 +10,11 @@ import org.papercloud.de.pdfservice.errors.InvalidDocumentException;
 import org.papercloud.de.pdfservice.errors.UserAuthenticationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-import java.nio.file.AccessDeniedException;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -154,6 +156,68 @@ class GlobalExceptionHandlerTest {
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
             assertThat(response.getBody()).isNotNull();
             assertThat(response.getBody().get("error")).contains("10MB");
+        }
+    }
+
+    @Nested
+    @DisplayName("IllegalArgumentException handling")
+    class IllegalArgumentExceptionTests {
+
+        @Test
+        @DisplayName("should return 400 BAD_REQUEST with error message")
+        void handleIllegalArgument_shouldReturnBadRequest() {
+            // Arrange
+            String errorMessage = "Email already exists";
+            IllegalArgumentException exception = new IllegalArgumentException(errorMessage);
+
+            // Act
+            ResponseEntity<Map<String, String>> response = exceptionHandler.handleIllegalArgument(exception);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody()).containsEntry("error", errorMessage);
+        }
+    }
+
+    @Nested
+    @DisplayName("HttpMessageNotReadableException handling")
+    class HttpMessageNotReadableExceptionTests {
+
+        @Test
+        @DisplayName("should return 400 BAD_REQUEST with malformed request message")
+        void handleMalformedRequest_shouldReturnBadRequest() {
+            // Arrange
+            HttpMessageNotReadableException exception =
+                    new HttpMessageNotReadableException("Malformed JSON request");
+
+            // Act
+            ResponseEntity<Map<String, String>> response = exceptionHandler.handleMalformedRequest(exception);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody()).containsEntry("error", "Malformed request body");
+        }
+    }
+
+    @Nested
+    @DisplayName("DisabledException handling")
+    class DisabledExceptionTests {
+
+        @Test
+        @DisplayName("should return 401 UNAUTHORIZED with verification message")
+        void handleDisabledAccount_shouldReturnUnauthorized() {
+            // Arrange
+            DisabledException exception = new DisabledException("User is disabled");
+
+            // Act
+            ResponseEntity<Map<String, String>> response = exceptionHandler.handleDisabledAccount(exception);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody()).containsEntry("error", "Account is disabled. Please verify your email.");
         }
     }
 

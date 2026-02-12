@@ -1,6 +1,7 @@
 package org.papercloud.de.pdfapi.controller;
 
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.core.dto.auth.*;
 import org.papercloud.de.core.ports.inbound.AuthenticationService;
@@ -20,31 +21,31 @@ public class AuthController {
     private final VerificationJWTService verificationService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authenticationService.register(request);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authenticationService.login(request);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/password-reset-request")
-    public ResponseEntity<Map<String, String>> requestPasswordReset(@RequestBody PasswordResetRequest request) {
+    public ResponseEntity<Map<String, String>> requestPasswordReset(@Valid @RequestBody PasswordResetRequest request) {
         passwordService.initiatePasswordReset(request.getEmail());
         return ResponseEntity.ok(Map.of("message", "Password reset email sent"));
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody PasswordResetRequest request) {
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody PasswordResetRequest request) {
         passwordService.initiatePasswordReset(request.getEmail());
         return ResponseEntity.ok(Map.of("message", "Password reset email sent"));
     }
 
     @PostMapping("/password-reset")
-    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody PasswordChangeRequest request) {
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody PasswordChangeRequest request) {
         passwordService.resetPassword(
                 request.getToken(),
                 request.getNewPassword(),
@@ -60,7 +61,7 @@ public class AuthController {
     }
 
     @PostMapping("/resend-verification")
-    public ResponseEntity<Map<String, String>> resendVerification(@RequestBody EmailVerificationRequest request) {
+    public ResponseEntity<Map<String, String>> resendVerification(@Valid @RequestBody EmailVerificationRequest request) {
         verificationService.resendVerificationEmail(request.getEmail());
         return ResponseEntity.ok(Map.of("message", "Verification email sent"));
     }

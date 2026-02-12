@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/api";
 
 interface Props {
   open: boolean;
@@ -44,7 +45,7 @@ const RegisterModal = ({ open, onOpenChange }: Props) => {
       onOpenChange(false);
       navigate("/app", { replace: true });
     } catch (err: any) {
-      toast.error(err.message || "Registration failed");
+      toast.error(getErrorMessage(err, "Registration failed"));
     }
   };
 

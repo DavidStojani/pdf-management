@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { api, DocumentItem } from "@/lib/api";
+import { api, DocumentItem, getErrorMessage } from "@/lib/api";
 import { toast } from "sonner";
 
 interface Props {
@@ -20,7 +20,7 @@ const SearchBar = ({ onResults }: Props) => {
       const results = await api.searchDocuments(query.trim());
       onResults(results);
     } catch (err: any) {
-      toast.error(err.message || "Search failed");
+      toast.error(getErrorMessage(err, "Search failed"));
     } finally {
       setLoading(false);
     }
