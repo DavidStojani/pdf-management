@@ -8,6 +8,7 @@ import org.papercloud.de.pdfapi.PdfApiApplication;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
+import org.papercloud.de.pdfdatabase.repository.FavouriteRepository;
 import org.papercloud.de.pdfdatabase.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -22,8 +23,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.papercloud.de.core.domain.Document.Status.UPLOADED;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -48,8 +48,12 @@ public class DocumentControllerIT {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private FavouriteRepository favouriteRepository;
+
     @BeforeEach
     void setUp() {
+        favouriteRepository.deleteAll();
         documentRepository.deleteAll();
         userRepository.deleteAll();
     }
@@ -158,6 +162,94 @@ public class DocumentControllerIT {
                             .file(emptyFile))
                     .andDo(print())
                     .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
+    class Favourites {
+
+        @Test
+        @WithMockUser(username = "testuser")
+        void addFavourite_returns204() throws Exception {
+            UserEntity user = createUser("testuser");
+            DocumentPdfEntity doc = createDocument(user, "fav.pdf", SAMPLE_PDF_CONTENT);
+
+            mockMvc.perform(post("/api/documents/" + doc.getId() + "/favourite"))
+                    .andDo(print())
+                    .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @WithMockUser(username = "testuser")
+        void addFavourite_nonExistentDocument_returns404() throws Exception {
+            createUser("testuser");
+
+            mockMvc.perform(post("/api/documents/99999/favourite"))
+                    .andDo(print())
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        void addFavourite_withoutAuth_returns401() throws Exception {
+            mockMvc.perform(post("/api/documents/1/favourite"))
+                    .andDo(print())
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @WithMockUser(username = "testuser")
+        void removeFavourite_returns204() throws Exception {
+            UserEntity user = createUser("testuser");
+            DocumentPdfEntity doc = createDocument(user, "fav.pdf", SAMPLE_PDF_CONTENT);
+
+            mockMvc.perform(delete("/api/documents/" + doc.getId() + "/favourite"))
+                    .andDo(print())
+                    .andExpect(status().isNoContent());
+        }
+
+        @Test
+        void removeFavourite_withoutAuth_returns401() throws Exception {
+            mockMvc.perform(delete("/api/documents/1/favourite"))
+                    .andDo(print())
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @WithMockUser(username = "testuser")
+        void getFavourites_returnsEmptyList() throws Exception {
+            createUser("testuser");
+
+            mockMvc.perform(get("/api/documents/favourites"))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$").isArray())
+                    .andExpect(jsonPath("$").isEmpty());
+        }
+
+        @Test
+        @WithMockUser(username = "testuser")
+        void getFavourites_returnsFavouritedDoc() throws Exception {
+            UserEntity user = createUser("testuser");
+            DocumentPdfEntity doc = createDocument(user, "fav.pdf", SAMPLE_PDF_CONTENT);
+
+            // Add favourite first
+            mockMvc.perform(post("/api/documents/" + doc.getId() + "/favourite"))
+                    .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/documents/favourites"))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].id").value(doc.getId()))
+                    .andExpect(jsonPath("$[0].isFavourite").value(true));
+        }
+
+        @Test
+        void getFavourites_withoutAuth_returns401() throws Exception {
+            mockMvc.perform(get("/api/documents/favourites"))
+                    .andDo(print())
+                    .andExpect(status().isUnauthorized());
         }
     }
 
