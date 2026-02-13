@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Data
 @Builder
@@ -24,7 +23,7 @@ public class EnrichmentResultDTO {
         }
         return tags.stream()
                 .map(TagDTO::getName)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Data

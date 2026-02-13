@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.papercloud.de.pdfsecurity.service.PdfUserDetailsService;
 import org.papercloud.de.pdfsecurity.util.JwtUtil;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtRequestFilter extends OncePerRequestFilter {
@@ -44,7 +46,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
       try {
         username = jwtUtil.getUsernameFromToken(jwt);
       } catch (Exception e) {
-        e.printStackTrace();
+        log.error("Failed to extract username from JWT token", e);
       }
     }
 

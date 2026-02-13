@@ -22,7 +22,6 @@ public class PdfTextExtractorServiceImpl implements PdfTextExtractorService {
         // Try each strategy in order until one can process the document
         for (TextExtractionService strategy : extractionStrategies) {
             if (strategy.canProcess(pdfBytes)) {
-                //TODO :Here before returning the text clean it up first.
                 return strategy.extractText(pdfBytes);
             }
         }

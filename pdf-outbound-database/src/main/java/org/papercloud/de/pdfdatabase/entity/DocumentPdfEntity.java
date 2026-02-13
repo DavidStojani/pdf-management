@@ -51,7 +51,7 @@ public class DocumentPdfEntity {
   @ElementCollection
   @CollectionTable(name = "document_tags", joinColumns = @JoinColumn(name = "document_id"))
   @Column(name = "tag")
-  private List<String> tags; //TODO : do this better
+  private List<String> tags;
 
   private LocalDate dateOnDocument;
 

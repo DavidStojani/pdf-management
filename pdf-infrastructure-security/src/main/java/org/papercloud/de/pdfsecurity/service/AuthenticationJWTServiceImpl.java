@@ -25,7 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -108,7 +107,7 @@ public class AuthenticationJWTServiceImpl implements AuthenticationService {
                 savedUser.isEnabled(), true, true, true,
                 savedUser.getRoles().stream()
                         .map(role -> new SimpleGrantedAuthority(role.getName()))
-                        .collect(Collectors.toList()));
+                        .toList());
 
         String token = jwtUtil.generateToken(userDetails);
 
@@ -131,8 +130,6 @@ public class AuthenticationJWTServiceImpl implements AuthenticationService {
                 .or(() -> userRepository.findByUsername(principal.getUsername()))
                 .orElseThrow(() -> new BadCredentialsException("User not found"));
 
-        // Update last login time
-        //user.setLastLogin(new Date());
         userRepository.save(user);
 
         String token = jwtUtil.generateToken(principal);

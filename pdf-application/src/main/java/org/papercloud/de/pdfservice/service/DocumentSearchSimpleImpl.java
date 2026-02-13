@@ -1,7 +1,6 @@
 package org.papercloud.de.pdfservice.service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import org.papercloud.de.core.dto.search.SearchHitDTO;
@@ -26,7 +25,7 @@ public class DocumentSearchSimpleImpl {
 
         List<SearchHitDTO> searchHits = matchingPages.stream()
                 .map(page -> mapToSearchHit(page, searchTerm))
-                .collect(Collectors.toList());
+                .toList();
 
         return SearchResultDTO.builder()
                 .hits(searchHits)

@@ -33,7 +33,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -107,11 +106,11 @@ public class DocumentServiceImpl implements DocumentService {
                 .filter(doc -> {
                     String title = doc.getTitle();
                     String filename = doc.getFilename();
-                    String displayTitle = title != null ? title : "UPLOAD_#" + doc.getId();
+                    String displayTitle = getDisplayTitle(doc);
                     return displayTitle.toLowerCase(Locale.ROOT).contains(q)
                             || (filename != null && filename.toLowerCase(Locale.ROOT).contains(q));
                 })
-                .collect(Collectors.toList());
+                .toList();
         return mapToListItems(filtered, favouriteIds);
     }
 
@@ -124,12 +123,12 @@ public class DocumentServiceImpl implements DocumentService {
                     DocumentPdfEntity doc = fav.getDocument();
                     return DocumentListItemDTO.builder()
                             .id(doc.getId())
-                            .title(doc.getTitle() != null ? doc.getTitle() : "UPLOAD_#" + doc.getId())
-                            .pageCount(doc.getPages() != null ? doc.getPages().size() : 0)
+                            .title(getDisplayTitle(doc))
+                            .pageCount(getPageCount(doc))
                             .isFavourite(true)
                             .build();
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -191,11 +190,11 @@ public class DocumentServiceImpl implements DocumentService {
         return documents.stream()
                 .map(doc -> DocumentListItemDTO.builder()
                         .id(doc.getId())
-                        .title(doc.getTitle() != null ? doc.getTitle() : "UPLOAD_#" + doc.getId())
-                        .pageCount(doc.getPages() != null ? doc.getPages().size() : 0)
+                        .title(getDisplayTitle(doc))
+                        .pageCount(getPageCount(doc))
                         .isFavourite(favouriteIds.contains(doc.getId()))
                         .build())
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private Authentication resolveAuthentication(Authentication authentication) {
@@ -222,6 +221,14 @@ public class DocumentServiceImpl implements DocumentService {
         if (!MediaType.APPLICATION_PDF_VALUE.equalsIgnoreCase(contentType)) {
             throw new InvalidDocumentException("Invalid file format. Only PDF files are allowed.");
         }
+    }
+
+    private String getDisplayTitle(DocumentPdfEntity doc) {
+        return doc.getTitle() != null ? doc.getTitle() : "UPLOAD_#" + doc.getId();
+    }
+
+    private int getPageCount(DocumentPdfEntity doc) {
+        return doc.getPages() != null ? doc.getPages().size() : 0;
     }
 
 }

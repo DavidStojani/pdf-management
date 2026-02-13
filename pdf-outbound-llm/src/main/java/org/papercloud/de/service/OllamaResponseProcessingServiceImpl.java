@@ -58,11 +58,10 @@ public class OllamaResponseProcessingServiceImpl implements LlmResponseProcessin
 
     @Override
     public Optional<EnrichmentResultDTO> parseEnrichmentResult(String json) {
-        ObjectMapper objectMapper = new ObjectMapper();
         try {
             return Optional.of(objectMapper.readValue(json, EnrichmentResultDTO.class));
         } catch (Exception e) {
-            // Log or handle JSON parsing error
+            log.warn("Failed to parse enrichment result JSON", e);
             return Optional.empty();
         }
     }

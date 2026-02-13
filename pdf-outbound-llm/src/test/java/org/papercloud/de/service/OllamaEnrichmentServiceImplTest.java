@@ -26,12 +26,12 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Unit tests for OllamaEnrichmentServiceImp.
+ * Unit tests for OllamaEnrichmentServiceImpl.
  * Tests LLM enrichment workflow including successful enrichment, error handling, and fallback scenarios.
  */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("OllamaEnrichmentServiceImp")
-class OllamaEnrichmentServiceImpTest {
+@DisplayName("OllamaEnrichmentServiceImpl")
+class OllamaEnrichmentServiceImplTest {
 
     @Mock
     private WebClient webClient;
@@ -54,11 +54,11 @@ class OllamaEnrichmentServiceImpTest {
     @Captor
     private ArgumentCaptor<Map<String, Object>> bodyCaptor;
 
-    private OllamaEnrichmentServiceImp service;
+    private OllamaEnrichmentServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new OllamaEnrichmentServiceImp(webClient, llmResponseProcessingService);
+        service = new OllamaEnrichmentServiceImpl(webClient, llmResponseProcessingService);
     }
 
     @Nested

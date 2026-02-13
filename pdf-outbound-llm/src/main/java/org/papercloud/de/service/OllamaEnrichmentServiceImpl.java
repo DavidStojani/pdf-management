@@ -20,7 +20,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class OllamaEnrichmentServiceImp implements EnrichmentService {
+public class OllamaEnrichmentServiceImpl implements EnrichmentService {
 
     private static final String MODEL_NAME = "qwen2.5:0.5b";
     private static final String PROMPT_TEMPLATE =

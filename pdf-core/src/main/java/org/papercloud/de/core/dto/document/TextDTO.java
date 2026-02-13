@@ -6,5 +6,5 @@ import lombok.Data;
 @Data
 @Builder
 public class TextDTO {
-    String text;
+    private String text;
 }

@@ -2,8 +2,6 @@ package org.papercloud.de.pdfdatabase.config;
 
 import org.papercloud.de.pdfdatabase.entity.RoleEntity;
 import org.papercloud.de.pdfdatabase.repository.RoleRepository;
-import org.springframework.context.annotation.Configuration;
-
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
