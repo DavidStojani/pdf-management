@@ -22,4 +22,8 @@ public interface DocumentService {
   java.util.List<DocumentListItemDTO> searchDocuments(String username, String query);
 
   java.util.List<DocumentListItemDTO> getFavourites(String username);
+
+  void addFavourite(Long documentId, String username);
+
+  void removeFavourite(Long documentId, String username);
 }

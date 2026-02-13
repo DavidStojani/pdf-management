@@ -9,8 +9,9 @@ import org.papercloud.de.core.dto.document.DocumentListItemDTO;
 import org.papercloud.de.core.events.OcrEvent;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
+import org.papercloud.de.pdfdatabase.entity.UserDocumentFavouriteEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
-import org.papercloud.de.pdfdatabase.repository.PageRepository;
+import org.papercloud.de.pdfdatabase.repository.FavouriteRepository;
 import org.papercloud.de.pdfdatabase.repository.UserRepository;
 import org.papercloud.de.pdfservice.errors.DocumentNotFoundException;
 import org.papercloud.de.pdfservice.errors.DocumentUploadException;
@@ -31,6 +32,7 @@ import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,6 +41,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     private final UserRepository userRepository;
     private final DocumentRepository documentRepository;
+    private final FavouriteRepository favouriteRepository;
     private final DocumentServiceMapper documentMapper;
     private final ApplicationEventPublisher publisher;
 
@@ -92,26 +95,62 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<DocumentListItemDTO> searchDocuments(String username, String query) {
         List<DocumentPdfEntity> documents = documentRepository.findByOwnerUsername(username);
+        Set<Long> favouriteIds = favouriteRepository.findFavouriteDocumentIdsByUsername(username);
         if (query == null || query.isBlank()) {
-            return mapToListItems(documents);
+            return mapToListItems(documents, favouriteIds);
         }
         String q = query.toLowerCase(Locale.ROOT);
         List<DocumentPdfEntity> filtered = documents.stream()
                 .filter(doc -> {
                     String title = doc.getTitle();
                     String filename = doc.getFilename();
-                    return (title != null && title.toLowerCase(Locale.ROOT).contains(q))
+                    String displayTitle = title != null ? title : "UPLOAD_#" + doc.getId();
+                    return displayTitle.toLowerCase(Locale.ROOT).contains(q)
                             || (filename != null && filename.toLowerCase(Locale.ROOT).contains(q));
                 })
                 .collect(Collectors.toList());
-        return mapToListItems(filtered);
+        return mapToListItems(filtered, favouriteIds);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<DocumentListItemDTO> getFavourites(String username) {
-        return List.of();
+        List<UserDocumentFavouriteEntity> favourites = favouriteRepository.findByUserUsernameWithDocument(username);
+        return favourites.stream()
+                .map(fav -> {
+                    DocumentPdfEntity doc = fav.getDocument();
+                    return DocumentListItemDTO.builder()
+                            .id(doc.getId())
+                            .title(doc.getTitle() != null ? doc.getTitle() : "UPLOAD_#" + doc.getId())
+                            .pageCount(doc.getPages() != null ? doc.getPages().size() : 0)
+                            .isFavourite(true)
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void addFavourite(Long documentId, String username) {
+        UserEntity user = findUserOrThrow(username);
+        DocumentPdfEntity document = getDocumentOrThrow(documentId);
+        if (!favouriteRepository.existsByUserIdAndDocumentId(user.getId(), documentId)) {
+            UserDocumentFavouriteEntity favourite = UserDocumentFavouriteEntity.builder()
+                    .user(user)
+                    .document(document)
+                    .build();
+            favouriteRepository.save(favourite);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void removeFavourite(Long documentId, String username) {
+        UserEntity user = findUserOrThrow(username);
+        favouriteRepository.deleteByUserIdAndDocumentId(user.getId(), documentId);
     }
 
 
@@ -148,12 +187,13 @@ public class DocumentServiceImpl implements DocumentService {
                 .orElseThrow(() -> new DocumentNotFoundException("Document not found with id: " + id));
     }
 
-    private List<DocumentListItemDTO> mapToListItems(List<DocumentPdfEntity> documents) {
+    private List<DocumentListItemDTO> mapToListItems(List<DocumentPdfEntity> documents, Set<Long> favouriteIds) {
         return documents.stream()
                 .map(doc -> DocumentListItemDTO.builder()
                         .id(doc.getId())
-                        .title(doc.getTitle() != null ? doc.getTitle() : doc.getFilename())
-                        .isFavourite(false)
+                        .title(doc.getTitle() != null ? doc.getTitle() : "UPLOAD_#" + doc.getId())
+                        .pageCount(doc.getPages() != null ? doc.getPages().size() : 0)
+                        .isFavourite(favouriteIds.contains(doc.getId()))
                         .build())
                 .collect(Collectors.toList());
     }

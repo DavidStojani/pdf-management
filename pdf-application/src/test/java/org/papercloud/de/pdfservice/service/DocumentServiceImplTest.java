@@ -14,9 +14,13 @@ import org.papercloud.de.core.dto.document.DocumentDTO;
 import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.core.dto.document.DocumentUploadDTO;
 import org.papercloud.de.core.events.OcrEvent;
+import org.papercloud.de.core.dto.document.DocumentListItemDTO;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
+import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
+import org.papercloud.de.pdfdatabase.entity.UserDocumentFavouriteEntity;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
+import org.papercloud.de.pdfdatabase.repository.FavouriteRepository;
 import org.papercloud.de.pdfdatabase.repository.UserRepository;
 import org.papercloud.de.pdfservice.errors.DocumentNotFoundException;
 import org.papercloud.de.pdfservice.errors.DocumentUploadException;
@@ -31,7 +35,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -56,6 +62,9 @@ class DocumentServiceImplTest {
 
     @Mock
     private DocumentRepository documentRepository;
+
+    @Mock
+    private FavouriteRepository favouriteRepository;
 
     @Mock
     private DocumentServiceMapper documentMapper;
@@ -343,6 +352,221 @@ class DocumentServiceImplTest {
             assertThat(result.getFileName()).isEqualTo("test.pdf");
 
             verify(documentMapper).toDownloadDTO(testDocument);
+        }
+    }
+
+    @Nested
+    @DisplayName("SearchDocuments Tests")
+    class SearchDocumentsTests {
+
+        @Test
+        @DisplayName("should use UPLOAD_# title when document has no enriched title")
+        void should_useUploadTitle_when_noEnrichedTitle() {
+            DocumentPdfEntity doc = DocumentPdfEntity.builder()
+                    .id(42L).filename("report.pdf").title(null).owner(testUser).build();
+            when(documentRepository.findByOwnerUsername("testuser")).thenReturn(List.of(doc));
+            when(favouriteRepository.findFavouriteDocumentIdsByUsername("testuser")).thenReturn(Set.of());
+
+            List<DocumentListItemDTO> result = documentService.searchDocuments("testuser", null);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getTitle()).isEqualTo("UPLOAD_#42");
+        }
+
+        @Test
+        @DisplayName("should use enriched title when available")
+        void should_useEnrichedTitle_when_available() {
+            DocumentPdfEntity doc = DocumentPdfEntity.builder()
+                    .id(1L).filename("report.pdf").title("Tax Report 2024").owner(testUser).build();
+            when(documentRepository.findByOwnerUsername("testuser")).thenReturn(List.of(doc));
+            when(favouriteRepository.findFavouriteDocumentIdsByUsername("testuser")).thenReturn(Set.of());
+
+            List<DocumentListItemDTO> result = documentService.searchDocuments("testuser", null);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getTitle()).isEqualTo("Tax Report 2024");
+        }
+
+        @Test
+        @DisplayName("should populate page count from pages list")
+        void should_populatePageCount() {
+            DocumentPdfEntity doc = DocumentPdfEntity.builder()
+                    .id(1L).filename("report.pdf").owner(testUser)
+                    .pages(List.of(
+                            PagesPdfEntity.builder().id(1L).pageNumber(1).build(),
+                            PagesPdfEntity.builder().id(2L).pageNumber(2).build(),
+                            PagesPdfEntity.builder().id(3L).pageNumber(3).build()
+                    ))
+                    .build();
+            when(documentRepository.findByOwnerUsername("testuser")).thenReturn(List.of(doc));
+            when(favouriteRepository.findFavouriteDocumentIdsByUsername("testuser")).thenReturn(Set.of());
+
+            List<DocumentListItemDTO> result = documentService.searchDocuments("testuser", null);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getPageCount()).isEqualTo(3);
+        }
+
+        @Test
+        @DisplayName("should return zero page count when pages is null")
+        void should_returnZeroPageCount_when_pagesNull() {
+            DocumentPdfEntity doc = DocumentPdfEntity.builder()
+                    .id(1L).filename("report.pdf").owner(testUser).pages(null).build();
+            when(documentRepository.findByOwnerUsername("testuser")).thenReturn(List.of(doc));
+            when(favouriteRepository.findFavouriteDocumentIdsByUsername("testuser")).thenReturn(Set.of());
+
+            List<DocumentListItemDTO> result = documentService.searchDocuments("testuser", null);
+
+            assertThat(result.get(0).getPageCount()).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("should filter by display title UPLOAD_#")
+        void should_filterByDisplayTitle() {
+            DocumentPdfEntity doc1 = DocumentPdfEntity.builder()
+                    .id(42L).filename("a.pdf").title(null).owner(testUser).build();
+            DocumentPdfEntity doc2 = DocumentPdfEntity.builder()
+                    .id(99L).filename("b.pdf").title(null).owner(testUser).build();
+            when(documentRepository.findByOwnerUsername("testuser")).thenReturn(List.of(doc1, doc2));
+            when(favouriteRepository.findFavouriteDocumentIdsByUsername("testuser")).thenReturn(Set.of());
+
+            List<DocumentListItemDTO> result = documentService.searchDocuments("testuser", "upload_#42");
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getId()).isEqualTo(42L);
+        }
+
+        @Test
+        @DisplayName("should filter by filename")
+        void should_filterByFilename() {
+            DocumentPdfEntity doc = DocumentPdfEntity.builder()
+                    .id(1L).filename("invoice-2024.pdf").title(null).owner(testUser).build();
+            when(documentRepository.findByOwnerUsername("testuser")).thenReturn(List.of(doc));
+            when(favouriteRepository.findFavouriteDocumentIdsByUsername("testuser")).thenReturn(Set.of());
+
+            List<DocumentListItemDTO> result = documentService.searchDocuments("testuser", "invoice");
+
+            assertThat(result).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("should mark favourited documents in search results")
+        void should_markFavouritedDocuments() {
+            DocumentPdfEntity doc1 = DocumentPdfEntity.builder()
+                    .id(1L).filename("a.pdf").owner(testUser).build();
+            DocumentPdfEntity doc2 = DocumentPdfEntity.builder()
+                    .id(2L).filename("b.pdf").owner(testUser).build();
+            when(documentRepository.findByOwnerUsername("testuser")).thenReturn(List.of(doc1, doc2));
+            when(favouriteRepository.findFavouriteDocumentIdsByUsername("testuser")).thenReturn(Set.of(1L));
+
+            List<DocumentListItemDTO> result = documentService.searchDocuments("testuser", null);
+
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0).getIsFavourite()).isTrue();
+            assertThat(result.get(1).getIsFavourite()).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("Favourites Tests")
+    class FavouritesTests {
+
+        @Test
+        @DisplayName("should add favourite idempotently")
+        void should_addFavourite_idempotently() {
+            when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+            when(documentRepository.findById(1L)).thenReturn(Optional.of(testDocument));
+            when(favouriteRepository.existsByUserIdAndDocumentId(1L, 1L)).thenReturn(true);
+
+            documentService.addFavourite(1L, "testuser");
+
+            verify(favouriteRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should save new favourite when not already favourited")
+        void should_saveNewFavourite() {
+            when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+            when(documentRepository.findById(1L)).thenReturn(Optional.of(testDocument));
+            when(favouriteRepository.existsByUserIdAndDocumentId(1L, 1L)).thenReturn(false);
+
+            documentService.addFavourite(1L, "testuser");
+
+            ArgumentCaptor<UserDocumentFavouriteEntity> captor = ArgumentCaptor.forClass(UserDocumentFavouriteEntity.class);
+            verify(favouriteRepository).save(captor.capture());
+            assertThat(captor.getValue().getUser()).isEqualTo(testUser);
+            assertThat(captor.getValue().getDocument()).isEqualTo(testDocument);
+        }
+
+        @Test
+        @DisplayName("should remove favourite")
+        void should_removeFavourite() {
+            when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+
+            documentService.removeFavourite(1L, "testuser");
+
+            verify(favouriteRepository).deleteByUserIdAndDocumentId(1L, 1L);
+        }
+
+        @Test
+        @DisplayName("should return favourite documents with isFavourite=true")
+        void should_returnFavouriteDocs() {
+            UserDocumentFavouriteEntity fav = UserDocumentFavouriteEntity.builder()
+                    .id(1L).user(testUser).document(testDocument).build();
+            when(favouriteRepository.findByUserUsernameWithDocument("testuser")).thenReturn(List.of(fav));
+
+            List<DocumentListItemDTO> result = documentService.getFavourites("testuser");
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getIsFavourite()).isTrue();
+            assertThat(result.get(0).getId()).isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("should throw exception when addFavourite with unknown user")
+        void should_throwException_when_addFavourite_userNotFound() {
+            when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> documentService.addFavourite(1L, "unknown"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("User not found: unknown");
+
+            verify(favouriteRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should throw exception when addFavourite with unknown document")
+        void should_throwException_when_addFavourite_documentNotFound() {
+            when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+            when(documentRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> documentService.addFavourite(999L, "testuser"))
+                    .isInstanceOf(DocumentNotFoundException.class)
+                    .hasMessageContaining("Document not found with id: 999");
+
+            verify(favouriteRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should throw exception when removeFavourite with unknown user")
+        void should_throwException_when_removeFavourite_userNotFound() {
+            when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> documentService.removeFavourite(1L, "unknown"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("User not found: unknown");
+
+            verify(favouriteRepository, never()).deleteByUserIdAndDocumentId(any(), any());
+        }
+
+        @Test
+        @DisplayName("should return empty list when no favourites exist")
+        void should_returnEmptyList_when_noFavourites() {
+            when(favouriteRepository.findByUserUsernameWithDocument("testuser")).thenReturn(List.of());
+
+            List<DocumentListItemDTO> result = documentService.getFavourites("testuser");
+
+            assertThat(result).isEmpty();
         }
     }
 

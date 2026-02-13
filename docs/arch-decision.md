@@ -160,6 +160,39 @@ class DocumentServiceTest {
 }
 ```
 ---
+# 2026-02-13 UI Web Tasks — Favourites, Page Count, Title Fix
+
+## Changes Made
+
+### Task 1: Remove search invitation banner
+- `ResultsPanel.tsx` — replaced the decorative search invitation banner with `return null` when no search results exist. Removed unused `Search` icon import.
+
+### Task 2: Fix document title display for pre-enrichment docs
+- `DocumentServiceImpl.mapToListItems` — documents without an enriched title now display `UPLOAD_#<DB_ID>` instead of the raw filename.
+- `DocumentServiceImpl.searchDocuments` — search filter matches against both the generated display title (`UPLOAD_#<id>`) and the original filename, so users can find docs by either.
+
+### Task 3: Page count display
+- **Backend:** Added `Integer pageCount` field to `DocumentListItemDTO`. Populated from the lazy-loaded `pages` collection in `mapToListItems`. Added `@Transactional(readOnly = true)` to `searchDocuments` to support lazy loading.
+- **Frontend:** Added `pageCount?: number` to `DocumentItem` interface. Displayed as grey `(N)` next to the document title in both `ResultsPanel.tsx` and `DocumentTabs.tsx`.
+
+### Task 4: Favourites end-to-end
+
+**New files:**
+- `UserDocumentFavouriteEntity` — JPA entity with surrogate PK, `@ManyToOne` refs to `UserEntity` and `DocumentPdfEntity`, unique constraint on `(user_id, document_id)`. Table auto-created via `ddl-auto: update`.
+- `FavouriteRepository` — Spring Data JPA repo with fetch-join query for `getFavourites`, `existsBy` for idempotent add, `deleteBy` for remove, and a batch query returning favourite doc IDs per username.
+
+**Modified files:**
+- `DocumentService` interface — added `addFavourite(Long, String)` and `removeFavourite(Long, String)`.
+- `DocumentServiceImpl` — injected `FavouriteRepository`; `searchDocuments` now fetches favourite IDs and marks `isFavourite` in results; `getFavourites` returns real data; `addFavourite` is idempotent; `removeFavourite` is transactional.
+- `DocumentController` — wired stub favourite endpoints to real service calls, removed `(stub)` from `@Operation` summaries.
+
+**Testing:** Added `SearchDocumentsTests` (title fallback, page count, search filter, favourite flag) and `FavouritesTests` (idempotent add, save new, remove, getFavourites) nested classes to `DocumentServiceImplTest`.
+
+### Design Decisions
+- **No new port interface for favourites** — `FavouriteRepository` lives in `pdf-outbound-database` and is injected directly into `DocumentServiceImpl`. This keeps things simple since there's only one persistence backend. If a second DB adapter is needed later, extract a `FavouritePort` into `pdf-core`.
+- **Batch favourite lookup** — `searchDocuments` fetches all favourite doc IDs for the user in one query (`findFavouriteDocumentIdsByUsername`), then checks membership via `Set.contains()` during mapping. This avoids N+1 queries.
+
+---
 # 2026-02-10 Dev Docker Workflow Consolidation
 
 Summary:

@@ -199,6 +199,7 @@ export function getErrorMessage(error: unknown, fallback: string): string {
 export interface DocumentItem {
   id: string;
   title: string;
+  pageCount?: number;
   isFavourite?: boolean;
 }
 

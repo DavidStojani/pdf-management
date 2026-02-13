@@ -8,5 +8,6 @@ import lombok.Data;
 public class DocumentListItemDTO {
     private Long id;
     private String title;
+    private Integer pageCount;
     private Boolean isFavourite;
 }

@@ -1,4 +1,4 @@
-import { Eye, X, Search } from "lucide-react";
+import { Eye, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DocumentItem } from "@/lib/api";
 import FavouriteButton from "./FavouriteButton";
@@ -11,18 +11,8 @@ interface Props {
 }
 
 const ResultsPanel = ({ results, onClose, onPreview, onFavouriteToggle }: Props) => {
-  // Invitation banner when no search has been performed yet
   if (results === null) {
-    return (
-      <div className="glass-card vault-shadow-md animate-fade-in overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-6 text-center">
-          <Search className="h-5 w-5 shrink-0 text-primary" />
-          <p className="text-sm text-muted-foreground">
-            Search through your documents using a tag, keyword, or a sentence describing what you're looking for.
-          </p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -46,6 +36,9 @@ const ResultsPanel = ({ results, onClose, onPreview, onFavouriteToggle }: Props)
             >
               <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                 {doc.title}
+                {doc.pageCount != null && (
+                  <span className="ml-1.5 text-muted-foreground font-normal">({doc.pageCount})</span>
+                )}
               </span>
               <div className="flex items-center gap-1">
                 <FavouriteButton

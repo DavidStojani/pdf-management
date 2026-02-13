@@ -82,15 +82,17 @@ public class DocumentController {
         return ResponseEntity.ok(documentService.getFavourites(authentication.getName()));
     }
 
-    @Operation(summary = "Add document to favourites (stub)")
+    @Operation(summary = "Add document to favourites")
     @PostMapping("/{id}/favourite")
     public ResponseEntity<Void> addFavourite(@PathVariable("id") Long id, Authentication authentication) {
+        documentService.addFavourite(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Remove document from favourites (stub)")
+    @Operation(summary = "Remove document from favourites")
     @DeleteMapping("/{id}/favourite")
     public ResponseEntity<Void> removeFavourite(@PathVariable("id") Long id, Authentication authentication) {
+        documentService.removeFavourite(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 

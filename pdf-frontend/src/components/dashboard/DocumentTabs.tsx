@@ -85,7 +85,12 @@ const DocumentTabs = ({ onPreview, onFavouriteToggle }: Props) => {
           >
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <FileText className="h-4 w-4 shrink-0 text-primary" />
-              <span className="truncate text-sm font-medium text-foreground">{doc.title}</span>
+              <span className="truncate text-sm font-medium text-foreground">
+                {doc.title}
+                {doc.pageCount != null && (
+                  <span className="ml-1.5 text-muted-foreground font-normal">({doc.pageCount})</span>
+                )}
+              </span>
             </div>
             <div className="flex items-center gap-1">
               <FavouriteButton docId={doc.id} isFavourite={doc.isFavourite ?? false} onToggle={handleFavToggle} />
