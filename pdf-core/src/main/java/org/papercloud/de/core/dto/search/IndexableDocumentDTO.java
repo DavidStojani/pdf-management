@@ -18,4 +18,5 @@ public class IndexableDocumentDTO {
     private List<String> tags;
     private int year;
     private String fullText;
+    private String username;
 }

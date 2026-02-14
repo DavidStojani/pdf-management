@@ -18,6 +18,17 @@
 7. Implement favourites feature end-to-end. -- UI+backend
 ---UI web---
 
+---REFACTOR---
+│
+│ - Hardcoded AES key & ECB mode in AESCryptoUtil.java — needs dedicated security ticket                               │
+│ - Hardcoded Ollama IP in WebClientConfig.java — needs infra/config review                                            │
+│ - Splitting DocumentServiceImpl — architectural refactor, separate task                                              │
+│ - Domain object immutability — broad changes to entity usage patterns                                                │
+│ - Hardcoded OCR datapath with typo in TessOcrExtractionStrategyImpl.java — needs config review                       │
+---REFACTOR
+
+
+
 10. Add observability stack (Grafana/Prometheus or similar). -- LOW
 11. Implement CI/CD pipeline making use of synonlogy 218(NO DOCKER) apps and my ubuntu server. -- LOW
  

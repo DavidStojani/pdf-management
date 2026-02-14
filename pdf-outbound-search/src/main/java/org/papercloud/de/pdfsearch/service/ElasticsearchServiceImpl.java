@@ -12,6 +12,7 @@ import org.papercloud.de.core.dto.search.SearchResultDTO;
 import org.papercloud.de.core.ports.outbound.SearchService;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.List;
 
@@ -26,6 +27,31 @@ public class ElasticsearchServiceImpl implements SearchService {
 
     private final ElasticsearchClient elasticsearchClient;
     private static final String INDEX_NAME = "documents";
+
+    @PostConstruct
+    public void createIndexIfNotExists() {
+        try {
+            boolean exists = elasticsearchClient.indices().exists(e -> e.index(INDEX_NAME)).value();
+            if (!exists) {
+                elasticsearchClient.indices().create(c -> c
+                        .index(INDEX_NAME)
+                        .mappings(m -> m
+                                .properties("fullText", p -> p.text(t -> t.analyzer("standard")))
+                                .properties("fileName", p -> p.text(t -> t
+                                        .analyzer("standard")
+                                        .fields("keyword", f -> f.keyword(k -> k.ignoreAbove(256)))
+                                ))
+                                .properties("username", p -> p.keyword(k -> k))
+                                .properties("tags", p -> p.keyword(k -> k))
+                                .properties("year", p -> p.integer(i -> i))
+                        )
+                );
+                log.info("Created Elasticsearch index '{}' with explicit mappings", INDEX_NAME);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to create Elasticsearch index '{}'. Search will be unavailable until ES is reachable.", INDEX_NAME, e);
+        }
+    }
 
     @Override
     public void indexDocument(IndexableDocumentDTO dto) {
@@ -63,7 +89,7 @@ public class ElasticsearchServiceImpl implements SearchService {
             // 2. Restrict to this user
             if (username != null) {
                 boolQ.filter(f -> f.term(t -> t
-                        .field("username.keyword")
+                        .field("username")
                         .value(username)
                 ));
             }

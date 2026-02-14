@@ -1,12 +1,16 @@
 package org.papercloud.de.pdfservice.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.papercloud.de.core.domain.Document;
 import org.papercloud.de.core.dto.document.DocumentDTO;
 import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.core.dto.document.DocumentUploadDTO;
 import org.papercloud.de.core.dto.document.DocumentListItemDTO;
+import org.papercloud.de.core.dto.search.SearchRequestDTO;
+import org.papercloud.de.core.dto.search.SearchResultDTO;
 import org.papercloud.de.core.events.OcrEvent;
+import org.papercloud.de.core.ports.outbound.SearchService;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.entity.UserDocumentFavouriteEntity;
@@ -30,10 +34,14 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DocumentServiceImpl implements DocumentService {
@@ -43,6 +51,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final FavouriteRepository favouriteRepository;
     private final DocumentServiceMapper documentMapper;
     private final ApplicationEventPublisher publisher;
+    private final SearchService searchService;
 
     @Override
     public DocumentDTO processUpload(MultipartFile file, Authentication authentication) {
@@ -96,15 +105,59 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional(readOnly = true)
     public List<DocumentListItemDTO> searchDocuments(String username, String query) {
-        List<DocumentPdfEntity> documents = documentRepository.findByOwnerUsername(username);
         Set<Long> favouriteIds = favouriteRepository.findFavouriteDocumentIdsByUsername(username);
+
         if (query == null || query.isBlank()) {
+            List<DocumentPdfEntity> documents = documentRepository.findByOwnerUsername(username);
             return mapToListItems(documents, favouriteIds);
         }
+
+        try {
+            return searchViaElasticsearch(username, query, favouriteIds);
+        } catch (Exception e) {
+            log.warn("Elasticsearch search failed, falling back to in-memory filtering", e);
+            return searchInMemory(username, query, favouriteIds);
+        }
+    }
+
+    private List<DocumentListItemDTO> searchViaElasticsearch(String username, String query, Set<Long> favouriteIds) {
+        SearchRequestDTO request = SearchRequestDTO.builder()
+                .query(query)
+                .username(username)
+                .page(0)
+                .size(50)
+                .build();
+
+        SearchResultDTO result = searchService.search(request);
+
+        List<Long> documentIds = result.getHits().stream()
+                .map(hit -> Long.parseLong(hit.getDocumentId()))
+                .toList();
+
+        if (documentIds.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, DocumentPdfEntity> documentMap = documentRepository.findAllById(documentIds).stream()
+                .collect(Collectors.toMap(DocumentPdfEntity::getId, doc -> doc));
+
+        return documentIds.stream()
+                .map(documentMap::get)
+                .filter(doc -> doc != null)
+                .map(doc -> DocumentListItemDTO.builder()
+                        .id(doc.getId())
+                        .title(getDisplayTitle(doc))
+                        .pageCount(getPageCount(doc))
+                        .isFavourite(favouriteIds.contains(doc.getId()))
+                        .build())
+                .toList();
+    }
+
+    private List<DocumentListItemDTO> searchInMemory(String username, String query, Set<Long> favouriteIds) {
+        List<DocumentPdfEntity> documents = documentRepository.findByOwnerUsername(username);
         String q = query.toLowerCase(Locale.ROOT);
         List<DocumentPdfEntity> filtered = documents.stream()
                 .filter(doc -> {
-                    String title = doc.getTitle();
                     String filename = doc.getFilename();
                     String displayTitle = getDisplayTitle(doc);
                     return displayTitle.toLowerCase(Locale.ROOT).contains(q)

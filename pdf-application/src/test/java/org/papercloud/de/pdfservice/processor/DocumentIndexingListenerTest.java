@@ -14,6 +14,7 @@ import org.papercloud.de.core.events.DocumentEnrichedEvent;
 import org.papercloud.de.core.ports.outbound.SearchService;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
+import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfdatabase.repository.PageRepository;
 import org.papercloud.de.pdfservice.errors.DocumentNotFoundException;
@@ -56,6 +57,11 @@ class DocumentIndexingListenerTest {
 
     @BeforeEach
     void setUp() {
+        UserEntity testOwner = UserEntity.builder()
+                .id(1L)
+                .username("testuser")
+                .build();
+
         testDocument = DocumentPdfEntity.builder()
                 .id(1L)
                 .filename("test.pdf")
@@ -63,6 +69,7 @@ class DocumentIndexingListenerTest {
                 .contentType("application/pdf")
                 .tags(Arrays.asList("invoice", "business"))
                 .dateOnDocument(LocalDate.of(2023, 5, 15))
+                .owner(testOwner)
                 .build();
 
         enrichedEvent = new DocumentEnrichedEvent(1L);
@@ -348,6 +355,7 @@ class DocumentIndexingListenerTest {
             assertThat(indexedDoc.getTags()).containsExactly("invoice", "business");
             assertThat(indexedDoc.getYear()).isEqualTo(2023);
             assertThat(indexedDoc.getFullText()).isEqualTo("Page one text\nPage two text");
+            assertThat(indexedDoc.getUsername()).isEqualTo("testuser");
         }
 
         @Test

@@ -50,6 +50,7 @@ public class DocumentIndexingListener {
                 .tags(document.getTags() == null ? List.of() : document.getTags())
                 .year(document.getDateOnDocument() != null ? document.getDateOnDocument().getYear() : LocalDate.now().getYear())
                 .fullText(fullText)
+                .username(document.getOwner().getUsername())
                 .build();
 
         searchService.indexDocument(dto);
