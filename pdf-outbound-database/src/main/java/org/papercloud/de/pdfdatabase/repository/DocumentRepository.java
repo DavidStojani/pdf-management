@@ -41,4 +41,17 @@ public interface DocumentRepository extends JpaRepository<DocumentPdfEntity, Lon
             @Param("maxAttempts") int maxAttempts,
             Pageable pageable
     );
+
+    @Query("""
+            select d from DocumentPdfEntity d
+            where d.status = org.papercloud.de.core.domain.Document.Status.INDEXING_ERROR
+              and d.indexingRetryCount < :maxAttempts
+              and (d.indexingNextRetryAt is null or d.indexingNextRetryAt <= :now)
+            order by d.uploadedAt asc
+            """)
+    List<DocumentPdfEntity> findRetryableIndexingDocuments(
+            @Param("now") LocalDateTime now,
+            @Param("maxAttempts") int maxAttempts,
+            Pageable pageable
+    );
 }

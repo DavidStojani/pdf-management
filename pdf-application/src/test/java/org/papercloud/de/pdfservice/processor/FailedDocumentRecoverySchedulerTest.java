@@ -44,20 +44,41 @@ class FailedDocumentRecoverySchedulerTest {
     }
 
     @Test
-    @DisplayName("should publish OCR and enrichment retry events for eligible documents")
+    @DisplayName("should publish OCR, enrichment, and indexing retry events for eligible documents")
     void should_publishRetryEvents() {
         DocumentPdfEntity ocrDoc = DocumentPdfEntity.builder().id(1L).build();
         DocumentPdfEntity enrichmentDoc = DocumentPdfEntity.builder().id(2L).build();
+        DocumentPdfEntity indexingDoc = DocumentPdfEntity.builder().id(3L).build();
 
         when(documentRepository.findRetryableOcrDocuments(any(LocalDateTime.class), eq(5), any(Pageable.class)))
                 .thenReturn(List.of(ocrDoc));
         when(documentRepository.findRetryableEnrichmentDocuments(any(LocalDateTime.class), eq(5), any(Pageable.class)))
                 .thenReturn(List.of(enrichmentDoc));
+        when(documentRepository.findRetryableIndexingDocuments(any(LocalDateTime.class), eq(5), any(Pageable.class)))
+                .thenReturn(List.of(indexingDoc));
 
         scheduler.retryFailedDocuments();
 
         verify(eventPublisher).publishEvent(any(org.papercloud.de.core.events.OcrEvent.class));
         verify(eventPublisher).publishEvent(any(org.papercloud.de.core.events.EnrichmentEvent.class));
+        verify(eventPublisher).publishEvent(any(org.papercloud.de.core.events.DocumentIndexingEvent.class));
+    }
+
+    @Test
+    @DisplayName("should publish indexing retry events for indexing-failed documents")
+    void should_publishIndexingRetryEvents() {
+        DocumentPdfEntity indexingDoc = DocumentPdfEntity.builder().id(5L).build();
+
+        when(documentRepository.findRetryableOcrDocuments(any(LocalDateTime.class), eq(5), any(Pageable.class)))
+                .thenReturn(List.of());
+        when(documentRepository.findRetryableEnrichmentDocuments(any(LocalDateTime.class), eq(5), any(Pageable.class)))
+                .thenReturn(List.of());
+        when(documentRepository.findRetryableIndexingDocuments(any(LocalDateTime.class), eq(5), any(Pageable.class)))
+                .thenReturn(List.of(indexingDoc));
+
+        scheduler.retryFailedDocuments();
+
+        verify(eventPublisher).publishEvent(any(org.papercloud.de.core.events.DocumentIndexingEvent.class));
     }
 
     @Test
@@ -69,6 +90,7 @@ class FailedDocumentRecoverySchedulerTest {
 
         verify(documentRepository, never()).findRetryableOcrDocuments(any(LocalDateTime.class), anyInt(), any(Pageable.class));
         verify(documentRepository, never()).findRetryableEnrichmentDocuments(any(LocalDateTime.class), anyInt(), any(Pageable.class));
+        verify(documentRepository, never()).findRetryableIndexingDocuments(any(LocalDateTime.class), anyInt(), any(Pageable.class));
         verify(eventPublisher, never()).publishEvent(any());
     }
 }

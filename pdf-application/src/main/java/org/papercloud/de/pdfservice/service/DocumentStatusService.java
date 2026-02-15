@@ -90,6 +90,27 @@ public class DocumentStatusService {
         documentRepository.save(document);
     }
 
+    @Transactional
+    public void markIndexingFailure(Long documentId, String reason) {
+        DocumentPdfEntity document = getDocument(documentId);
+        int nextRetryCount = document.getIndexingRetryCount() + 1;
+
+        document.setStatus(Document.Status.INDEXING_ERROR);
+        document.setIndexingRetryCount(nextRetryCount);
+        document.setIndexingNextRetryAt(calculateNextRetryAt(nextRetryCount));
+        document.setIndexingLastError(sanitizeError(reason));
+        documentRepository.save(document);
+    }
+
+    @Transactional
+    public void resetIndexingRetry(Long documentId) {
+        DocumentPdfEntity document = getDocument(documentId);
+        document.setIndexingRetryCount(0);
+        document.setIndexingNextRetryAt(null);
+        document.setIndexingLastError(null);
+        documentRepository.save(document);
+    }
+
     private LocalDateTime calculateNextRetryAt(int retryCount) {
         long multiplier = 1L << Math.max(0, retryCount - 1);
         long delayMinutes = Math.min(retryBackoffBaseMinutes * multiplier, retryBackoffMaxMinutes);

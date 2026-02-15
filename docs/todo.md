@@ -28,6 +28,8 @@
 ---REFACTOR
 
 
+12. implement a audit level where 
+
 
 10. Add observability stack (Grafana/Prometheus or similar). -- LOW
 11. Implement CI/CD pipeline making use of synonlogy 218(NO DOCKER) apps and my ubuntu server. -- LOW

@@ -8,6 +8,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.papercloud.de.core.ports.outbound.OcrTextCleaningService;
 import org.papercloud.de.core.ports.outbound.TextExtractionService;
+import org.springframework.stereotype.Component;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+@Component
 @RequiredArgsConstructor
 public class TessOcrExtractionStrategyImpl implements TextExtractionService {
 

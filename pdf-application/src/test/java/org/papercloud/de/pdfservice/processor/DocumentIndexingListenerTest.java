@@ -9,8 +9,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.papercloud.de.core.domain.Document;
 import org.papercloud.de.core.dto.search.IndexableDocumentDTO;
 import org.papercloud.de.core.events.DocumentEnrichedEvent;
+import org.papercloud.de.core.events.DocumentIndexingEvent;
 import org.papercloud.de.core.ports.outbound.SearchService;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
@@ -18,6 +20,7 @@ import org.papercloud.de.pdfdatabase.entity.UserEntity;
 import org.papercloud.de.pdfdatabase.repository.DocumentRepository;
 import org.papercloud.de.pdfdatabase.repository.PageRepository;
 import org.papercloud.de.pdfservice.errors.DocumentNotFoundException;
+import org.papercloud.de.pdfservice.service.DocumentStatusService;
 
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -28,13 +31,11 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for DocumentIndexingListener.
- * Tests indexing workflow, text aggregation, and null handling.
+ * Tests indexing workflow, text aggregation, null handling, and status tracking.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("DocumentIndexingListener Tests")
@@ -48,6 +49,9 @@ class DocumentIndexingListenerTest {
 
     @Mock
     private SearchService searchService;
+
+    @Mock
+    private DocumentStatusService documentStatusService;
 
     @InjectMocks
     private DocumentIndexingListener documentIndexingListener;
@@ -92,6 +96,80 @@ class DocumentIndexingListenerTest {
                     .hasMessageContaining("Document not found with ID: 1");
 
             verify(searchService, never()).indexDocument(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("Status Tracking Tests")
+    class StatusTrackingTests {
+
+        @Test
+        @DisplayName("should set status to INDEXING_IN_PROGRESS before indexing")
+        void should_setStatusToIndexingInProgress() {
+            // Arrange
+            PagesPdfEntity page = createPage(1, "Content");
+            when(documentRepository.findById(1L)).thenReturn(Optional.of(testDocument));
+            when(pageRepository.findByDocumentIdOrderByPageNumber(1L)).thenReturn(List.of(page));
+
+            // Act
+            documentIndexingListener.handleDocumentEnriched(enrichedEvent);
+
+            // Assert
+            verify(documentStatusService).updateStatus(1L, Document.Status.INDEXING_IN_PROGRESS);
+        }
+
+        @Test
+        @DisplayName("should set status to INDEXING_COMPLETED on success")
+        void should_setStatusToIndexingCompleted_onSuccess() {
+            // Arrange
+            PagesPdfEntity page = createPage(1, "Content");
+            when(documentRepository.findById(1L)).thenReturn(Optional.of(testDocument));
+            when(pageRepository.findByDocumentIdOrderByPageNumber(1L)).thenReturn(List.of(page));
+
+            // Act
+            documentIndexingListener.handleDocumentEnriched(enrichedEvent);
+
+            // Assert
+            verify(documentStatusService).updateStatus(1L, Document.Status.INDEXING_COMPLETED);
+            verify(documentStatusService).resetIndexingRetry(1L);
+        }
+
+        @Test
+        @DisplayName("should call markIndexingFailure on error")
+        void should_callMarkIndexingFailure_onError() {
+            // Arrange
+            PagesPdfEntity page = createPage(1, "Content");
+            when(documentRepository.findById(1L)).thenReturn(Optional.of(testDocument));
+            when(pageRepository.findByDocumentIdOrderByPageNumber(1L)).thenReturn(List.of(page));
+            doThrow(new RuntimeException("ES connection refused"))
+                    .when(searchService).indexDocument(any());
+
+            // Act
+            documentIndexingListener.handleDocumentEnriched(enrichedEvent);
+
+            // Assert
+            verify(documentStatusService).markIndexingFailure(1L, "ES connection refused");
+            verify(documentStatusService, never()).updateStatus(1L, Document.Status.INDEXING_COMPLETED);
+            verify(documentStatusService, never()).resetIndexingRetry(1L);
+        }
+
+        @Test
+        @DisplayName("should handle DocumentIndexingEvent for retries")
+        void should_handleDocumentIndexingEvent() {
+            // Arrange
+            DocumentIndexingEvent indexingEvent = new DocumentIndexingEvent(1L);
+            PagesPdfEntity page = createPage(1, "Content");
+            when(documentRepository.findById(1L)).thenReturn(Optional.of(testDocument));
+            when(pageRepository.findByDocumentIdOrderByPageNumber(1L)).thenReturn(List.of(page));
+
+            // Act
+            documentIndexingListener.handleDocumentIndexingEvent(indexingEvent);
+
+            // Assert
+            verify(documentStatusService).updateStatus(1L, Document.Status.INDEXING_IN_PROGRESS);
+            verify(searchService).indexDocument(any(IndexableDocumentDTO.class));
+            verify(documentStatusService).updateStatus(1L, Document.Status.INDEXING_COMPLETED);
+            verify(documentStatusService).resetIndexingRetry(1L);
         }
     }
 

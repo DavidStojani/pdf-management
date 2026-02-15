@@ -2,6 +2,7 @@ package org.papercloud.de.pdfservice.processor;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.papercloud.de.core.events.DocumentIndexingEvent;
 import org.papercloud.de.core.events.EnrichmentEvent;
 import org.papercloud.de.core.events.OcrEvent;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
@@ -45,19 +46,23 @@ public class FailedDocumentRecoveryScheduler {
                 documentRepository.findRetryableOcrDocuments(now, maxAttempts, pageRequest);
         List<DocumentPdfEntity> enrichmentCandidates =
                 documentRepository.findRetryableEnrichmentDocuments(now, maxAttempts, pageRequest);
+        List<DocumentPdfEntity> indexingCandidates =
+                documentRepository.findRetryableIndexingDocuments(now, maxAttempts, pageRequest);
 
-        if (ocrCandidates.isEmpty() && enrichmentCandidates.isEmpty()) {
+        if (ocrCandidates.isEmpty() && enrichmentCandidates.isEmpty() && indexingCandidates.isEmpty()) {
             log.debug("Retry scheduler found no eligible documents");
             return;
         }
 
         log.info(
-                "Retry scheduler dispatching {} OCR retries and {} enrichment retries",
+                "Retry scheduler dispatching {} OCR retries, {} enrichment retries, and {} indexing retries",
                 ocrCandidates.size(),
-                enrichmentCandidates.size()
+                enrichmentCandidates.size(),
+                indexingCandidates.size()
         );
 
         ocrCandidates.forEach(doc -> eventPublisher.publishEvent(new OcrEvent(doc.getId())));
         enrichmentCandidates.forEach(doc -> eventPublisher.publishEvent(new EnrichmentEvent(doc.getId())));
+        indexingCandidates.forEach(doc -> eventPublisher.publishEvent(new DocumentIndexingEvent(doc.getId())));
     }
 }

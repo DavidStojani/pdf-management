@@ -29,7 +29,10 @@ public class Document {
         OCR_ERROR,
         ENRICHMENT_IN_PROGRESS,
         ENRICHMENT_COMPLETED,
-        ENRICHMENT_ERROR
+        ENRICHMENT_ERROR,
+        INDEXING_IN_PROGRESS,
+        INDEXING_COMPLETED,
+        INDEXING_ERROR
     }
 
     private Long id;

@@ -165,5 +165,44 @@ class DocumentStatusServiceTest {
             assertThat(doc.getEnrichmentNextRetryAt()).isNull();
             verify(documentRepository).save(doc);
         }
+
+        @Test
+        @DisplayName("markIndexingFailure should set status and increment retry metadata")
+        void markIndexingFailure_setsRetryMetadata() {
+            DocumentPdfEntity doc = DocumentPdfEntity.builder()
+                    .id(1L)
+                    .status(Document.Status.INDEXING_IN_PROGRESS)
+                    .indexingRetryCount(1)
+                    .build();
+            when(documentRepository.findById(1L)).thenReturn(Optional.of(doc));
+
+            documentStatusService.markIndexingFailure(1L, "ES connection refused");
+
+            assertThat(doc.getStatus()).isEqualTo(Document.Status.INDEXING_ERROR);
+            assertThat(doc.getIndexingRetryCount()).isEqualTo(2);
+            assertThat(doc.getIndexingNextRetryAt()).isNotNull();
+            assertThat(doc.getIndexingLastError()).isEqualTo("ES connection refused");
+            verify(documentRepository).save(doc);
+        }
+
+        @Test
+        @DisplayName("resetIndexingRetry should clear retry metadata")
+        void resetIndexingRetry_clearsRetryMetadata() {
+            DocumentPdfEntity doc = DocumentPdfEntity.builder()
+                    .id(1L)
+                    .status(Document.Status.INDEXING_COMPLETED)
+                    .indexingRetryCount(3)
+                    .indexingLastError("error")
+                    .build();
+            doc.setIndexingNextRetryAt(java.time.LocalDateTime.now());
+            when(documentRepository.findById(1L)).thenReturn(Optional.of(doc));
+
+            documentStatusService.resetIndexingRetry(1L);
+
+            assertThat(doc.getIndexingRetryCount()).isZero();
+            assertThat(doc.getIndexingLastError()).isNull();
+            assertThat(doc.getIndexingNextRetryAt()).isNull();
+            verify(documentRepository).save(doc);
+        }
     }
 }

@@ -73,4 +73,12 @@ public class DocumentPdfEntity {
 
   @Column(length = 1000)
   private String enrichmentLastError;
+
+  @Builder.Default
+  private int indexingRetryCount = 0;
+
+  private LocalDateTime indexingNextRetryAt;
+
+  @Column(length = 1000)
+  private String indexingLastError;
 }

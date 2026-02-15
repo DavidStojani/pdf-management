@@ -24,7 +24,6 @@ public class PagesPdfEntity {
   private int pageNumber;
 
   @Column(name = "page_text", columnDefinition = "TEXT")
-  @Convert(converter = EncryptedStringConverter.class)
   private String pageText; // Extracted text for searching
 
   @ManyToOne
