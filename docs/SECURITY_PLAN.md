@@ -102,3 +102,126 @@ While possible in theory, pure "searchable encryption" is rarely used in practic
 
 ---
 This plan provides a robust framework for securing your sensitive document management system while enabling powerful search capabilities.
+
+
+---
+
+
+Here is Claude's plan:
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+Plan: Append Self-Hosted Deployment Security Section to SECURITY_PLAN.md
+
+Context
+
+The user wants to save the home-network/self-hosting security plan discussed in chat into docs/SECURITY_PLAN.md. The existing file covers app-level
+encryption and Elasticsearch hybrid search security well, but has no section on deployment architecture, VPN access, or Docker network isolation for a
+self-hosted setup. We will append a new section rather than overwrite the existing content.
+
+Critical File
+
+- docs/SECURITY_PLAN.md — append only, preserve existing content
+
+Change: Append Section 4 — Self-Hosted Deployment Security
+
+Append the following to the bottom of docs/SECURITY_PLAN.md:
+
+ ---
+4. Self-Hosted Deployment Security (Home Network)
+
+For personal use hosted on a home network, the following architecture provides a strong security posture without over-engineering.
+
+4.1. Recommended Network Architecture
+
+Internet
+│
+└── Synology NAS — VPN Server (OpenVPN or WireGuard, UDP 1194/51820)
+│
+└── Home LAN (192.168.x.x)
+│
+└── Reverse Proxy — port 443 only (Nginx Proxy Manager or Traefik)
+│
+├── pdf-inbound-api (Spring Boot) ─┐
+├── PostgreSQL                      ├── Docker internal network (not LAN-exposed)
+├── Elasticsearch                   │
+└── Ollama ────────────────────────┘
+
+Key principle: Only the reverse proxy is reachable from the LAN. All backend services communicate over a Docker internal network invisible to the rest of
+the home network.
+
+4.2. Docker Network Isolation
+
+In docker-compose.yml, use an internal: true network for backend services:
+
+networks:
+internal:
+internal: true   # no external routing; services only reachable by each other
+proxy:
+internal: false  # reverse proxy connects here
+
+services:
+pdf-api:
+networks: [proxy, internal]
+postgres:
+networks: [internal]   # never exposed to LAN
+elasticsearch:
+networks: [internal]
+ollama:
+networks: [internal]
+
+Only expose port 443 on the reverse proxy host. Remove any ports: mappings from PostgreSQL, Elasticsearch, and Ollama.
+
+4.3. VPN for External Access
+
+- OpenVPN on Synology (VPN Server package): mature, well-supported, solid choice
+- WireGuard alternative: smaller codebase, faster handshake, easier to audit — preferred if Synology supports it
+- Router firewall: allow only VPN port inbound (UDP 1194 for OpenVPN, UDP 51820 for WireGuard); block all other inbound traffic
+- When away: connect VPN → access app exactly as if on home LAN
+
+4.4. TLS / HTTPS
+
+- Use Nginx Proxy Manager or Traefik as reverse proxy with TLS termination
+- For internal-only use: generate a local CA with mkcert and trust it on your devices
+- Alternatively, use a real domain pointing to an internal IP with Let's Encrypt DNS challenge (no public exposure needed)
+
+4.5. Secrets Management
+
+Ensure no secrets are hardcoded in application.yml or committed to git:
+
+┌───────────────────────────┬────────────────────────────────────────────────┐
+│          Secret           │                    Location                    │
+├───────────────────────────┼────────────────────────────────────────────────┤
+│ JWT signing key           │ .env file (not committed), injected as env var │
+├───────────────────────────┼────────────────────────────────────────────────┤
+│ DB password               │ .env file                                      │
+├───────────────────────────┼────────────────────────────────────────────────┤
+│ AES encryption key        │ .env file                                      │
+├───────────────────────────┼────────────────────────────────────────────────┤
+│ Elasticsearch credentials │ .env file                                      │
+└───────────────────────────┴────────────────────────────────────────────────┘
+
+Use spring.config.import=optional:file:.env[.properties] or Docker Compose env_file directive.
+
+4.6. Application-Level Hardening (Pre-Go-Live Checklist)
+
+- Rate limiting on /auth/login and /auth/register (Spring Security or Bucket4j)
+- Short-lived JWT access tokens (15–30 min) with refresh token rotation
+- HTTPS enforced — reject plain HTTP at reverse proxy level
+- Principle of least privilege for DB user (no DDL rights in production)
+- No stack traces in API error responses (production Spring profile)
+- Elasticsearch accessible only from app container (no public Kibana)
+
+4.7. Priority Order for Going Live
+
+1. Docker internal network isolation — highest impact, quick Docker Compose change
+2. Externalize all secrets to .env file, remove from application.yml
+3. Reverse proxy + TLS — single HTTPS entry point
+4. Rate limiting on auth endpoints — brute force protection
+5. Synology VPN setup — enables secure external access
+
+ ---
+Verification
+
+- Confirm PostgreSQL port is NOT reachable from outside the Docker network: nc -zv <host-ip> 5432 should fail
+- Confirm app is reachable over HTTPS on port 443
+- Confirm VPN connection allows access to the app from outside the LAN
+- Run existing unit and integration tests: mvn test
