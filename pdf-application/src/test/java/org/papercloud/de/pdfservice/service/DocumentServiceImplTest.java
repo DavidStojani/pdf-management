@@ -1,5 +1,6 @@
 package org.papercloud.de.pdfservice.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -10,6 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.papercloud.de.core.domain.Document;
+import org.papercloud.de.core.domain.UploadSource;
 import org.papercloud.de.core.dto.document.DocumentDTO;
 import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.core.dto.document.DocumentUploadDTO;
@@ -79,6 +81,12 @@ class DocumentServiceImplTest {
     @Mock
     private SearchService searchService;
 
+    @Mock
+    private AuditService auditService;
+
+    @Mock
+    private HttpServletRequest httpServletRequest;
+
     @InjectMocks
     private DocumentServiceImpl documentService;
 
@@ -120,7 +128,7 @@ class DocumentServiceImplTest {
             MultipartFile file = createValidPdfFile();
 
             // Act & Assert
-            assertThatThrownBy(() -> documentService.processUpload(file, null))
+            assertThatThrownBy(() -> documentService.processUpload(file, null, UploadSource.FILE_UPLOAD))
                     .isInstanceOf(UserAuthenticationException.class)
                     .hasMessageContaining("User must be authenticated");
 
@@ -136,7 +144,7 @@ class DocumentServiceImplTest {
             when(auth.isAuthenticated()).thenReturn(false);
 
             // Act & Assert
-            assertThatThrownBy(() -> documentService.processUpload(file, auth))
+            assertThatThrownBy(() -> documentService.processUpload(file, auth, UploadSource.FILE_UPLOAD))
                     .isInstanceOf(UserAuthenticationException.class)
                     .hasMessageContaining("User must be authenticated");
 
@@ -150,7 +158,7 @@ class DocumentServiceImplTest {
             Authentication auth = createAuthenticatedUser();
 
             // Act & Assert
-            assertThatThrownBy(() -> documentService.processUpload(null, auth))
+            assertThatThrownBy(() -> documentService.processUpload(null, auth, UploadSource.FILE_UPLOAD))
                     .isInstanceOf(InvalidDocumentException.class)
                     .hasMessageContaining("Uploaded file must not be empty");
 
@@ -166,7 +174,7 @@ class DocumentServiceImplTest {
             Authentication auth = createAuthenticatedUser();
 
             // Act & Assert
-            assertThatThrownBy(() -> documentService.processUpload(file, auth))
+            assertThatThrownBy(() -> documentService.processUpload(file, auth, UploadSource.FILE_UPLOAD))
                     .isInstanceOf(InvalidDocumentException.class)
                     .hasMessageContaining("Uploaded file must not be empty");
 
@@ -182,7 +190,7 @@ class DocumentServiceImplTest {
             Authentication auth = createAuthenticatedUser();
 
             // Act & Assert
-            assertThatThrownBy(() -> documentService.processUpload(file, auth))
+            assertThatThrownBy(() -> documentService.processUpload(file, auth, UploadSource.FILE_UPLOAD))
                     .isInstanceOf(InvalidDocumentException.class)
                     .hasMessageContaining("Invalid file format. Only PDF files are allowed");
 
@@ -204,7 +212,7 @@ class DocumentServiceImplTest {
                     .thenReturn(testDocumentDTO);
 
             // Act
-            DocumentDTO result = documentService.processUpload(file, auth);
+            DocumentDTO result = documentService.processUpload(file, auth, UploadSource.FILE_UPLOAD);
 
             // Assert
             assertThat(result).isNotNull();
@@ -237,7 +245,7 @@ class DocumentServiceImplTest {
             Authentication auth = createAuthenticatedUser();
 
             // Act & Assert
-            assertThatThrownBy(() -> documentService.processUpload(file, auth))
+            assertThatThrownBy(() -> documentService.processUpload(file, auth, UploadSource.FILE_UPLOAD))
                     .isInstanceOf(DocumentUploadException.class)
                     .hasMessageContaining("Failed to read uploaded file");
 

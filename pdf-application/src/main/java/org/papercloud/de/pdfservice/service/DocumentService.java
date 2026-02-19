@@ -4,6 +4,7 @@ package org.papercloud.de.pdfservice.service;
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 
+import org.papercloud.de.core.domain.UploadSource;
 import org.papercloud.de.core.dto.document.DocumentDTO;
 import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.core.dto.document.DocumentUploadDTO;
@@ -13,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface DocumentService {
 
-  DocumentDTO processUpload(MultipartFile file, Authentication authentication);
+  DocumentDTO processUpload(MultipartFile file, Authentication authentication, UploadSource uploadSource);
 
   DocumentDTO processDocument(DocumentUploadDTO file, String username) throws IOException;
 

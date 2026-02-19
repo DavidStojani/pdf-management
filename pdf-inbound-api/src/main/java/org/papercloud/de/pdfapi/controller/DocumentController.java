@@ -3,9 +3,12 @@ package org.papercloud.de.pdfapi.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.papercloud.de.core.domain.UploadSource;
+import org.papercloud.de.core.dto.audit.AuditEntryDTO;
 import org.papercloud.de.core.dto.document.DocumentDTO;
 import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.core.dto.document.DocumentListItemDTO;
+import org.papercloud.de.pdfservice.service.AuditService;
 import org.papercloud.de.pdfservice.service.DocumentService;
 import org.papercloud.de.pdfservice.textutils.FolderScannerService;
 import org.slf4j.Logger;
@@ -30,11 +33,12 @@ public class DocumentController {
     private static final Logger logger = LoggerFactory.getLogger(DocumentController.class);
     private final DocumentService documentService;
     private final FolderScannerService folderScannerService;
+    private final AuditService auditService;
 
     @Operation(summary = "Upload a PDF document")
     @PostMapping("/upload")
     public ResponseEntity<Map<String, String>> uploadPdf(@RequestParam("file") MultipartFile file, Authentication authentication) {
-        DocumentDTO savedDocument = documentService.processUpload(file, authentication);
+        DocumentDTO savedDocument = documentService.processUpload(file, authentication, UploadSource.FILE_UPLOAD);
 
         return ResponseEntity.ok(Map.of(
                 "message", "Document uploaded successfully",
@@ -94,6 +98,14 @@ public class DocumentController {
     public ResponseEntity<Void> removeFavourite(@PathVariable("id") Long id, Authentication authentication) {
         documentService.removeFavourite(id, authentication.getName());
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Get audit log for a document")
+    @GetMapping("/{id}/audit")
+    public ResponseEntity<List<AuditEntryDTO>> getAuditLog(
+            @PathVariable("id") Long id, Authentication authentication) {
+        List<AuditEntryDTO> auditLog = auditService.getAuditLog(id, authentication.getName());
+        return ResponseEntity.ok(auditLog);
     }
 
     @GetMapping("/ping")

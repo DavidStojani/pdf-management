@@ -1,8 +1,11 @@
 package org.papercloud.de.pdfservice.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.papercloud.de.core.domain.AuditActionType;
 import org.papercloud.de.core.domain.Document;
+import org.papercloud.de.core.domain.UploadSource;
 import org.papercloud.de.core.dto.document.DocumentDTO;
 import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
 import org.papercloud.de.core.dto.document.DocumentUploadDTO;
@@ -22,7 +25,6 @@ import org.papercloud.de.pdfservice.errors.DocumentUploadException;
 import org.papercloud.de.pdfservice.errors.InvalidDocumentException;
 import org.papercloud.de.pdfservice.errors.UserAuthenticationException;
 import org.papercloud.de.pdfservice.mapper.DocumentServiceMapper;
-import org.papercloud.de.pdfservice.processor.DocumentOcrProcessor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
@@ -52,15 +54,17 @@ public class DocumentServiceImpl implements DocumentService {
     private final DocumentServiceMapper documentMapper;
     private final ApplicationEventPublisher publisher;
     private final SearchService searchService;
+    private final AuditService auditService;
+    private final HttpServletRequest httpServletRequest;
 
     @Override
-    public DocumentDTO processUpload(MultipartFile file, Authentication authentication) {
+    public DocumentDTO processUpload(MultipartFile file, Authentication authentication, UploadSource uploadSource) {
         Authentication resolvedAuth = resolveAuthentication(authentication);
         validateAuthentication(resolvedAuth);
         validateFile(file);
         validatePdfContentType(file);
 
-        DocumentUploadDTO uploadDTO = buildUploadDto(file);
+        DocumentUploadDTO uploadDTO = buildUploadDto(file, uploadSource);
         return processDocumentSafely(uploadDTO, resolvedAuth.getName());
     }
 
@@ -87,8 +91,14 @@ public class DocumentServiceImpl implements DocumentService {
                 .build();
 
         documentRepository.save(documentPdfEntity);
-        return documentMapper.toDocumentDTO(documentPdfEntity);
 
+        String source = uploadDTO.getUploadSource() != null
+                ? uploadDTO.getUploadSource().name()
+                : UploadSource.FILE_UPLOAD.name();
+        recordAuditSafely(documentPdfEntity.getId(), username, AuditActionType.UPLOADED,
+                getClientIp(), getClientUserAgent(), "UPLOAD_SOURCE:" + source);
+
+        return documentMapper.toDocumentDTO(documentPdfEntity);
     }
 
     @Override
@@ -98,6 +108,9 @@ public class DocumentServiceImpl implements DocumentService {
         if (!document.getOwner().getUsername().equals(username)) {
             throw new AccessDeniedException("You are not allowed to access this document.");
         }
+
+        recordAuditSafely(id, username, AuditActionType.DOWNLOADED,
+                getClientIp(), getClientUserAgent(), null);
 
         return documentMapper.toDownloadDTO(document);
     }
@@ -196,6 +209,7 @@ public class DocumentServiceImpl implements DocumentService {
                     .build();
             favouriteRepository.save(favourite);
         }
+        recordAuditSafely(documentId, username, AuditActionType.FAVOURITE_ADDED, null, null, null);
     }
 
     @Override
@@ -203,18 +217,20 @@ public class DocumentServiceImpl implements DocumentService {
     public void removeFavourite(Long documentId, String username) {
         UserEntity user = findUserOrThrow(username);
         favouriteRepository.deleteByUserIdAndDocumentId(user.getId(), documentId);
+        recordAuditSafely(documentId, username, AuditActionType.FAVOURITE_REMOVED, null, null, null);
     }
 
 
     // 🔽 --- Private Helper Methods --- 🔽
 
-    private DocumentUploadDTO buildUploadDto(MultipartFile file) {
+    private DocumentUploadDTO buildUploadDto(MultipartFile file, UploadSource uploadSource) {
         try {
             return DocumentUploadDTO.builder()
                     .fileName(file.getOriginalFilename())
                     .contentType(file.getContentType())
                     .size(file.getSize())
                     .inputPdfBytes(file.getBytes())
+                    .uploadSource(uploadSource)
                     .build();
         } catch (IOException e) {
             throw new DocumentUploadException("Failed to read uploaded file.", e);
@@ -284,4 +300,34 @@ public class DocumentServiceImpl implements DocumentService {
         return doc.getPages() != null ? doc.getPages().size() : 0;
     }
 
+    private String getClientIp() {
+        try {
+            String forwarded = httpServletRequest.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                return forwarded.split(",")[0].trim();
+            }
+            return httpServletRequest.getRemoteAddr();
+        } catch (Exception e) {
+            log.debug("Could not extract client IP", e);
+            return null;
+        }
+    }
+
+    private String getClientUserAgent() {
+        try {
+            return httpServletRequest.getHeader("User-Agent");
+        } catch (Exception e) {
+            log.debug("Could not extract User-Agent", e);
+            return null;
+        }
+    }
+
+    private void recordAuditSafely(Long documentId, String username, AuditActionType action,
+                                   String ipAddress, String userAgent, String additionalInfo) {
+        try {
+            auditService.recordAction(documentId, username, action, ipAddress, userAgent, additionalInfo);
+        } catch (Exception e) {
+            log.warn("Failed to record audit event {} for document {}: {}", action, documentId, e.getMessage());
+        }
+    }
 }

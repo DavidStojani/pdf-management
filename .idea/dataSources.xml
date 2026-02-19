@@ -13,11 +13,11 @@
       </jdbc-additional-properties>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
-    <data-source source="LOCAL" name="pdf_management@thinkpad" uuid="343622d2-8969-4d4b-861b-6e87e4a25b78">
+    <data-source source="LOCAL" name="pdf_management@192.168.2.107" uuid="343622d2-8969-4d4b-861b-6e87e4a25b78">
       <driver-ref>postgresql</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.postgresql.Driver</jdbc-driver>
-      <jdbc-url>jdbc:postgresql://thinkpad:5432/pdf_management</jdbc-url>
+      <jdbc-url>jdbc:postgresql://192.168.2.107:5432/pdf_management</jdbc-url>
       <jdbc-additional-properties>
         <property name="com.intellij.clouds.kubernetes.db.host.port" />
         <property name="com.intellij.clouds.kubernetes.db.enabled" value="false" />
