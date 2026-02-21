@@ -209,6 +209,20 @@
 
         <pluginManagement>
             <plugins>
+                <!-- Surefire: pass test-only env vars so tests don't need a real .env -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <configuration>
+                        <environmentVariables>
+                            <!-- 32 zero-bytes base64-encoded — valid AES-256 key for tests only -->
+                            <PDF_AES_SECRET>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</PDF_AES_SECRET>
+                            <!-- Min 32-char string used directly as HMAC-SHA256 key in JwtUtil -->
+                            <JWT_SECRET>test-jwt-secret-for-unit-tests-not-for-production</JWT_SECRET>
+                        </environmentVariables>
+                    </configuration>
+                </plugin>
+
                 <!-- Compiler plugin + annotation processors for MapStruct & Lombok -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

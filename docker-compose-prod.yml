@@ -1,0 +1,25 @@
+services:
+  springboot-app:
+    build:
+      context: .
+      dockerfile: services/Dockerfiles/api/Dockerfile.prod
+    container_name: springboot-app-prod
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      PDF_AES_SECRET: ${PDF_AES_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      OLLAMA_BASE_URL: http://ollama:11434
+      FRONTEND_URL: ${FRONTEND_URL}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - backend
+
+networks:
+  backend:
+    external: true
+    name: pdf-backend

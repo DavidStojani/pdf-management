@@ -37,7 +37,7 @@ class AESCryptoUtilTest {
         }
 
         @Test
-        @DisplayName("should produce different encrypted output each time due to padding")
+        @DisplayName("should produce different encrypted output each time due to random IV")
         void encrypt_byteArray_shouldProduceDifferentOutputForSameInput() throws Exception {
             // Arrange
             byte[] originalData = "Test data".getBytes(StandardCharsets.UTF_8);
@@ -46,8 +46,8 @@ class AESCryptoUtilTest {
             byte[] encrypted1 = AESCryptoUtil.encrypt(originalData);
             byte[] encrypted2 = AESCryptoUtil.encrypt(originalData);
 
-            // Assert - with PKCS5Padding, same input produces same output in ECB mode
-            assertThat(encrypted1).isEqualTo(encrypted2);
+            // Assert - AES/GCM uses a random 12-byte IV each time, so ciphertext differs
+            assertThat(encrypted1).isNotEqualTo(encrypted2);
         }
 
         @Test

@@ -2,23 +2,42 @@ services:
   springboot-app:
     build:
       context: .
-      dockerfile: services/Dockerfiles/api/Dockerfile
+      dockerfile: services/Dockerfiles/api/Dockerfile.dev
     container_name: springboot-app-dev
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pdf_management
-      SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: admin
-      OLLAMA_BASE_URL: http://ollama:11434
       SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pdf_management
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      ELASTICSEARCH_URL: http://localhost:9200   # not running — search fails gracefully
+      OLLAMA_BASE_URL: http://192.168.2.107:11434  # optional: server Ollama
+      PDF_AES_SECRET: ${PDF_AES_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "8080:8080"
-      - "5005:5005"
-    networks:
-      - backend
+    depends_on:
+      - postgres
     volumes:
       - ./pdf-inbound-api/target/pdf-inbound-api-1.0-SNAPSHOT.jar:/app/app.jar
-      - /home/stojani/Downloads:/mnt/Downloads
     command: ["java", "-jar", "app.jar"]
+    networks:
+      - dev-net
+
+  postgres:
+    image: postgres:15
+    container_name: postgres-dev
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: pdf_management
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+    networks:
+      - dev-net
+
+volumes:
+  postgres-dev-data:
+
 networks:
-  backend:
-    external: true
+  dev-net:
+    driver: bridge

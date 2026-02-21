@@ -117,14 +117,6 @@ The user wants to save the home-network/self-hosting security plan discussed in 
 encryption and Elasticsearch hybrid search security well, but has no section on deployment architecture, VPN access, or Docker network isolation for a
 self-hosted setup. We will append a new section rather than overwrite the existing content.
 
-Critical File
-
-- docs/SECURITY_PLAN.md — append only, preserve existing content
-
-Change: Append Section 4 — Self-Hosted Deployment Security
-
-Append the following to the bottom of docs/SECURITY_PLAN.md:
-
  ---
 4. Self-Hosted Deployment Security (Home Network)
 
