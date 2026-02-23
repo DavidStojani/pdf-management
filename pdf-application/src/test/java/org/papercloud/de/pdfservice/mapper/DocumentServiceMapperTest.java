@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.papercloud.de.core.dto.document.DocumentDTO;
 import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
+import org.papercloud.de.core.dto.document.DocumentListItemDTO;
 import org.papercloud.de.core.dto.document.PageDTO;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
@@ -547,6 +548,67 @@ class DocumentServiceMapperTest {
             assertThat(dtos.get(0).getPageNumber()).isEqualTo(10);
             assertThat(dtos.get(1).getPageNumber()).isEqualTo(5);
             assertThat(dtos.get(2).getPageNumber()).isEqualTo(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("toListItemDTO Tests")
+    class ToListItemDTOTests {
+
+        @Test
+        @DisplayName("should use enriched title when available")
+        void toListItemDTO_enrichedTitle_usesTitle() {
+            DocumentPdfEntity entity = DocumentPdfEntity.builder()
+                    .id(1L).filename("doc.pdf").title("Tax Report 2024").build();
+
+            DocumentListItemDTO dto = mapper.toListItemDTO(entity, false);
+
+            assertThat(dto.getId()).isEqualTo(1L);
+            assertThat(dto.getTitle()).isEqualTo("Tax Report 2024");
+        }
+
+        @Test
+        @DisplayName("should fall back to UPLOAD_# when title is null")
+        void toListItemDTO_nullTitle_usesUploadFallback() {
+            DocumentPdfEntity entity = DocumentPdfEntity.builder()
+                    .id(42L).filename("doc.pdf").title(null).build();
+
+            DocumentListItemDTO dto = mapper.toListItemDTO(entity, false);
+
+            assertThat(dto.getTitle()).isEqualTo("UPLOAD_#42");
+        }
+
+        @Test
+        @DisplayName("should set isFavourite from parameter")
+        void toListItemDTO_isFavourite_setFromParameter() {
+            DocumentPdfEntity entity = DocumentPdfEntity.builder()
+                    .id(1L).filename("doc.pdf").title("Doc").build();
+
+            assertThat(mapper.toListItemDTO(entity, true).getIsFavourite()).isTrue();
+            assertThat(mapper.toListItemDTO(entity, false).getIsFavourite()).isFalse();
+        }
+
+        @Test
+        @DisplayName("should count pages from pages list")
+        void toListItemDTO_withPages_countsPages() {
+            DocumentPdfEntity entity = DocumentPdfEntity.builder()
+                    .id(1L).filename("doc.pdf").title("Doc")
+                    .pages(List.of(
+                            PagesPdfEntity.builder().id(1L).pageNumber(1).build(),
+                            PagesPdfEntity.builder().id(2L).pageNumber(2).build()
+                    ))
+                    .build();
+
+            assertThat(mapper.toListItemDTO(entity, false).getPageCount()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("should return zero page count when pages is null")
+        void toListItemDTO_nullPages_returnsZeroPageCount() {
+            DocumentPdfEntity entity = DocumentPdfEntity.builder()
+                    .id(1L).filename("doc.pdf").title("Doc").pages(null).build();
+
+            assertThat(mapper.toListItemDTO(entity, false).getPageCount()).isEqualTo(0);
         }
     }
 }

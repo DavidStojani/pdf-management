@@ -4,6 +4,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.papercloud.de.core.dto.document.DocumentDTO;
 import org.papercloud.de.core.dto.document.DocumentDownloadDTO;
+import org.papercloud.de.core.dto.document.DocumentListItemDTO;
 import org.papercloud.de.core.dto.document.PageDTO;
 import org.papercloud.de.pdfdatabase.entity.DocumentPdfEntity;
 import org.papercloud.de.pdfdatabase.entity.PagesPdfEntity;
@@ -31,4 +32,15 @@ public interface DocumentServiceMapper {
     PageDTO toPageDTO(PagesPdfEntity entity);
 
     List<PageDTO> toPageDTOList(List<PagesPdfEntity> entities);
+
+    default DocumentListItemDTO toListItemDTO(DocumentPdfEntity doc, boolean isFavourite) {
+        String title = doc.getTitle() != null ? doc.getTitle() : "UPLOAD_#" + doc.getId();
+        int pageCount = doc.getPages() != null ? doc.getPages().size() : 0;
+        return DocumentListItemDTO.builder()
+                .id(doc.getId())
+                .title(title)
+                .pageCount(pageCount)
+                .isFavourite(isFavourite)
+                .build();
+    }
 }

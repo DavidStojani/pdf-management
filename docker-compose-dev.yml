@@ -2,14 +2,14 @@ services:
   springboot-app:
     build:
       context: .
-      dockerfile: services/Dockerfiles/api/Dockerfile.dev
+      dockerfile: services/Dockerfiles/api/Dockerfile
     container_name: springboot-app-dev
     environment:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pdf_management
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      ELASTICSEARCH_URL: http://localhost:9200   # not running — search fails gracefully
+      ELASTICSEARCH_URL: http://elasticsearch:9200
       OLLAMA_BASE_URL: http://192.168.2.107:11434  # optional: server Ollama
       PDF_AES_SECRET: ${PDF_AES_SECRET}
       JWT_SECRET: ${JWT_SECRET}
@@ -30,11 +30,25 @@ services:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: pdf_management
+    ports:
+      - "5432:5432"
     volumes:
       - postgres-dev-data:/var/lib/postgresql/data
     networks:
       - dev-net
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - xpack.security.http.ssl.enabled=false
+    ports:
+      - "9200:9200"
+    networks:
+      - dev-net
 volumes:
   postgres-dev-data:
 
