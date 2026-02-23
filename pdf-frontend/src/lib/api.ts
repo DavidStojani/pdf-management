@@ -147,6 +147,15 @@ class ApiClient {
     });
   }
 
+  async uploadFolderFile(file: File): Promise<{ documentId: string }> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return this.request<{ documentId: string }>("/api/documents/upload", {
+      method: "POST",
+      body: formData,
+    });
+  }
+
   async uploadCameraImages(files: File[]): Promise<void> {
     const formData = new FormData();
     files.forEach((f) => formData.append("files[]", f));

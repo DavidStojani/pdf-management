@@ -1,5 +1,5 @@
-import { FileText, LogOut } from "lucide-react";
-import { Navigate, Outlet } from "react-router-dom";
+import { FileText, FolderOpen, LogOut } from "lucide-react";
+import { NavLink, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 
@@ -19,6 +19,19 @@ const PrivateLayout = () => {
             <span className="text-lg font-bold text-foreground">PDF Vault</span>
           </div>
           <div className="flex items-center gap-3">
+            <NavLink
+              to="/app/folder-sync"
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`
+              }
+            >
+              <FolderOpen className="h-4 w-4" />
+              <span className="hidden sm:inline">Folder Sync</span>
+            </NavLink>
             <span className="hidden text-sm text-muted-foreground sm:block">
               {userEmail}
             </span>

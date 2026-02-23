@@ -14,8 +14,8 @@
 
 set -euo pipefail
 
-SERVER="${1:-stojani@192.168.2.107}"
-REMOTE_DIR="~/pdf-management-app"
+SERVER="${1:-patos@192.168.2.107}"
+REMOTE_DIR="~/pdf-management"
 JAR="pdf-inbound-api/target/pdf-inbound-api-1.0-SNAPSHOT.jar"
 
 echo "==> Building JAR..."
@@ -23,7 +23,7 @@ mvn clean package -DskipTests -q
 
 echo "==> Copying JAR to $SERVER:$REMOTE_DIR ..."
 ssh "$SERVER" "mkdir -p $REMOTE_DIR/pdf-inbound-api/target"
-scp "$JAR" "$SERVER:$REMOTE_DIR/pdf-inbound-api/target/"
+scp "$JAR" "$SERVER:$REMOTE_DIR/"
 
 echo "==> Deploying on server..."
 ssh "$SERVER" "

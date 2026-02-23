@@ -19,7 +19,7 @@ public class EnrichmentEventListener {
     private final DocumentEnrichmentProcessor enrichmentProcessor;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Async
+    @Async("documentProcessingExecutor")
     @EventListener
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleDocumentUploaded(EnrichmentEvent event) {

@@ -193,6 +193,56 @@ class DocumentServiceTest {
 - **Batch favourite lookup** — `searchDocuments` fetches all favourite doc IDs for the user in one query (`findFavouriteDocumentIdsByUsername`), then checks membership via `Set.contains()` during mapping. This avoids N+1 queries.
 
 ---
+# 2026-02-23 DocumentServiceImpl — SOLID Decomposition
+
+## Problem
+
+`DocumentServiceImpl` owned four unrelated concerns (upload, download, search, favourites) plus
+cross-cutting plumbing (HTTP context, auth validation, file validation, audit wrapping). It had
+8 constructor-injected dependencies, making it hard to test and change in isolation.
+
+## Solution
+
+Split into four focused services behind `DocumentServiceImpl`, which is now a pure delegation
+facade. `DocumentService` interface is unchanged — the controller required zero edits.
+
+| New Service | Responsibility |
+|---|---|
+| `DocumentUploadService` / `Impl` | Auth + file validation, entity creation, OCR event, audit |
+| `DocumentDownloadService` / `Impl` | Ownership check, audit, return bytes |
+| `DocumentSearchService` / `Impl` | ES search with in-memory fallback |
+| `DocumentFavouriteService` / `Impl` | Idempotent add/remove/list |
+
+**`ClientInfoExtractor`** (`util/`) — new `@Component` that wraps `HttpServletRequest` for IP
+and User-Agent extraction, removing the servlet concern from business services.
+
+**`DocumentServiceMapper.toListItemDTO(DocumentPdfEntity, boolean)`** — new `default` method
+that centralises the display-title fallback (`UPLOAD_#<id>`) and page-count logic; eliminates
+the duplicated builder pattern across search and favourites.
+
+## Design Decisions
+
+- `DocumentServiceImpl` kept as the public facade — controller, `FolderScannerService`, and any
+  other callers stay untouched.
+- Each sub-service is a Spring `@Service` bean injected by type; no qualifier needed because each
+  interface has exactly one implementation.
+- `toListItemDTO` is a `default` method (not a MapStruct-generated mapping) because it requires
+  runtime logic (null-check on title, `pages.size()`). MapStruct ignores default methods.
+- `processDocument` is `@Transactional` on `DocumentUploadServiceImpl` — the event is published
+  inside the same transaction boundary, but `@TransactionalEventListener(AFTER_COMMIT)` on the
+  OCR listener ensures it fires only after the DB commit.
+
+## Test Migration
+
+- `DocumentServiceImplTest` — replaced with 7 thin delegation-verification tests.
+- `DocumentUploadServiceImplTest` — full upload/processDocument coverage.
+- `DocumentDownloadServiceImplTest` — download, ownership, audit.
+- `DocumentSearchServiceImplTest` — ES routing, in-memory fallback, title/page-count assertions
+  (uses real `DocumentServiceMapperImpl` via `@Spy`).
+- `DocumentFavouriteServiceImplTest` — idempotent add, remove, list, error cases.
+- `DocumentServiceMapperTest` — added `ToListItemDTOTests` nested class.
+
+---
 # 2026-02-10 Dev Docker Workflow Consolidation
 
 Summary:

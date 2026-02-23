@@ -8,6 +8,7 @@ import PublicLayout from "@/components/PublicLayout";
 import PrivateLayout from "@/components/PrivateLayout";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
+import FolderSync from "@/pages/FolderSync";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
             </Route>
             <Route element={<PrivateLayout />}>
               <Route path="/app" element={<Dashboard />} />
+              <Route path="/app/folder-sync" element={<FolderSync />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

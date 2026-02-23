@@ -69,7 +69,91 @@ Upload → save to DB (UPLOADED) → publish OcrEvent
 
 ## Infrastructure Dependencies
 
-- **PostgreSQL 15** (port 5432) — primary data store
+- **PostgreSQL 15** (port 5432) — primary data store (dev only)
+- **MariaDB 10** (192.168.2.108:3306) — production database (external, not in Docker)
 - **Elasticsearch 8.13.0** (port 9200) — full-text search
 - **Ollama** (port 11434) — LLM enrichment
 - **Tesseract OCR** — must be installed on host or available in Docker image (language data: German + English)
+
+## Production Environment
+
+### Machine Layout
+
+| Machine | IP | Role |
+|---|---|---|
+| Ubuntu server | 192.168.2.107 | Spring Boot API + ES + Ollama + PGAdmin |
+| Synology NAS | 192.168.2.108 | React frontend (Web Station, port 80) |
+| MariaDB NAS | 192.168.2.108:3306 | Production database (external) |
+| Laptop | — | Development only |
+
+### Deploy the Backend (from laptop)
+
+```bash
+./scripts/deploy-prod.sh
+```
+
+This builds the JAR locally, SCPs it to the Ubuntu server, and runs `docker compose up --build` remotely.
+
+**Manual steps on the Ubuntu server (if needed):**
+```bash
+docker compose -f docker-compose-infra.yml up -d   # start infra (creates pdf-backend network)
+docker compose -f docker-compose-prod.yml up -d --build   # start app
+docker compose -f docker-compose-prod.yml logs -f  # view logs
+docker compose -f docker-compose-prod.yml restart  # restart after .env change
+```
+
+### Deploy the Frontend (on Synology via SSH)
+
+```bash
+cd ~/apps/pdf-management-app/pdf-frontend
+git pull
+npm run build
+cp -r dist/* /volume1/web/
+```
+
+Web Station (Apache/Nginx) serves `/volume1/web/` on port 80 automatically — no restart needed.
+
+### Required Files on Ubuntu Server
+
+```
+~/pdf-management-app/
+├── .env                                         # prod secrets (never committed)
+├── docker-compose-infra.yml
+├── docker-compose-prod.yml
+└── services/Dockerfiles/api/Dockerfile.prod
+```
+
+No source code or Maven needed on the server — only the built JAR is shipped.
+
+### Required Files on Synology
+
+```
+~/apps/pdf-management-app/pdf-frontend/
+├── .env.production.local    # VITE_API_BASE_URL=http://192.168.2.107:8080
+├── src/, package.json ...   # full frontend source (git clone)
+/volume1/web/
+└── index.html + assets/     # built dist files (copied after npm run build)
+```
+
+### Environment Variables (.env on Ubuntu server)
+
+| Variable | Description |
+|---|---|
+| `PDF_AES_SECRET` | AES-256 key — `openssl rand -base64 32` |
+| `JWT_SECRET` | JWT signing secret — `openssl rand -base64 64` |
+| `DB_USERNAME` | MariaDB username |
+| `DB_PASSWORD` | MariaDB password |
+| `FRONTEND_URL` | `http://192.168.2.108` (Synology, port 80) — used for CORS |
+
+### Spring Profiles
+
+- `dev` — PostgreSQL in Docker, ES disabled (graceful fail), local Ollama optional
+- `prod` — MariaDB external, ES + Ollama via Docker network `pdf-backend`, `ddl-auto: validate`
+
+### Key Production Behaviours
+
+- `ddl-auto: validate` in prod — schema changes must be applied manually to MariaDB before deploying
+- ES search fails gracefully if unavailable — uploads and OCR still work
+- CORS allows only `FRONTEND_URL` + localhost dev origins
+- JWT expires after 30 min — no refresh token yet
+- Full guide: `docs/security-and-deployment-guide.md`
