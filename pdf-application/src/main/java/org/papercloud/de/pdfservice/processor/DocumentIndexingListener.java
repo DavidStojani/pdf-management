@@ -31,14 +31,14 @@ public class DocumentIndexingListener {
     private final SearchService searchService;
     private final DocumentStatusService documentStatusService;
 
-    @Async
+    @Async("documentProcessingExecutor")
     @EventListener
     @Transactional
     public void handleDocumentEnriched(DocumentEnrichedEvent event) {
         indexDocument(event.documentId());
     }
 
-    @Async
+    @Async("documentProcessingExecutor")
     @EventListener
     @Transactional
     public void handleDocumentIndexingEvent(DocumentIndexingEvent event) {

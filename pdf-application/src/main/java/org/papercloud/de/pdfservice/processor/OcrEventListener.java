@@ -35,7 +35,7 @@ public class OcrEventListener {
     private final DocumentStatusService documentStatusService;
 
     @EventListener
-    @Async
+    @Async("documentProcessingExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleOcrEvent(OcrEvent event) {
         Long docId = event.documentId();
